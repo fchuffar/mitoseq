@@ -1,4 +1,4 @@
 # mitoseq
-A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
+A pipeline dedicated to mitochondrial genome analysis using RNA sequencing data.
 
  
