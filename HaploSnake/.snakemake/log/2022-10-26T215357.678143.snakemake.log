@@ -1,0 +1,5 @@
+Building DAG of jobs...
+MissingInputException in rule findhaplo in line 7 of /home/ben/Bureau/HaploSnake/Snakefile:
+Missing input files for rule findhaplo:
+    affected files:
+        HL6.mito.vcf.recode.vcf

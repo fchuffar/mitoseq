@@ -1,0 +1,6 @@
+Building DAG of jobs...
+MissingInputException in rule extractmito in line 1 of /home/ben/Bureau/mitoseq/HaploSnake/Snakefile:
+Missing input files for rule extractmito:
+    output: HEL.mito.vcf.recode.vcf
+    affected files:
+        HEL.raw.vcf

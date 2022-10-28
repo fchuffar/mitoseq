@@ -1,0 +1,13 @@
+rule extractmito:
+    input:
+        "HEL.raw.vcf"
+    output:
+        "HEL.mito.vcf.recode.vcf"
+    shell:
+        "vcftools --vcf {input} --out HEL.mito.vcf --chr NC_012920.1 --recode"
+
+rule findhaplo:
+    input:
+        "HEL.mito.vcf.recode.vcf"
+    shell:
+        "haplogrep classify --input {input} --output haplogroups.txt --format vcf"

@@ -1,0 +1,37 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job            count    min threads    max threads
+-----------  -------  -------------  -------------
+extractmito        1              1              1
+findhaplo          1              1              1
+total              2              1              1
+
+Select jobs to execute...
+
+[Fri Oct 28 10:14:15 2022]
+rule extractmito:
+    input: HEL.raw.vcf
+    output: HEL.mito.vcf.recode.vcf
+    jobid: 1
+    reason: Missing output files: HEL.mito.vcf.recode.vcf
+    resources: tmpdir=/tmp
+
+[Fri Oct 28 10:14:15 2022]
+Finished job 1.
+1 of 2 steps (50%) done
+Select jobs to execute...
+
+[Fri Oct 28 10:14:15 2022]
+rule findhaplo:
+    input: HEL.mito.vcf.recode.vcf
+    jobid: 0
+    reason: Rules with a run or shell declaration but no output are always executed.
+    resources: tmpdir=/tmp
+
+[Fri Oct 28 10:14:16 2022]
+Finished job 0.
+2 of 2 steps (100%) done
+Complete log: .snakemake/log/2022-10-28T101415.560153.snakemake.log
