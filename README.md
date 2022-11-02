@@ -7,9 +7,13 @@ A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
 
 - You need to clone this project to your desired directory with ```git clone```
 
-- In order to make this pipeline work setup.sh and mitoseq.py need to have rights to execute:
-```$ chmod +x setup.sh mitoseq.py```
+- In order to make this pipeline work you need to have conda installed and the environnement configured:
 
+    1) To download Miniconda : https://docs.conda.io/en/latest/miniconda.html
+
+    2) To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
+
+    3) To setup the environnement: ```conda env update --file Env/config.yaml --name MitoSeq ; conda activate MitoSeq ; conda update --all --yes```
 - All directory creation is configured in setup.sh:
 ```$ ./setup.sh```
 
