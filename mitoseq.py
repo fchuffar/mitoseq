@@ -1,5 +1,6 @@
 import os
 import argparse
+from function import haplogroup_count, fuse_haplogroups
 
 parser = argparse.ArgumentParser(description="test")
 parser.add_argument(
@@ -22,6 +23,22 @@ parser.add_argument(
     type=int,
     help="Choose the number of thread to be used for commands inside of snakemake",
     default=4,
+)
+parser.add_argument(
+    "-b",
+    "--bank",
+    metavar="bank",
+    type=str,
+    help="enter the bank file with all haplogroups",
+    default="genbank_haplogroup_count.csv",
+)
+parser.add_argument(
+    "-n",
+    "--num",
+    metavar="num",
+    type=int,
+    help="enter the minimum count to accept an haplogroup",
+    default=0,
 )
 args = parser.parse_args()
 
@@ -59,3 +76,6 @@ for sample in samples_list:
     os.system(prompt)
     if not args.keep:
         os.system("rm Data/Temp/*")
+
+fuse_haplogroups()
+print(haplogroup_count("haplogroups.txt", args.num, args.bank))
