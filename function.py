@@ -1,4 +1,3 @@
-import argparse
 import os
 
 
@@ -108,8 +107,10 @@ class Trie:
         best_fit = None
         for count, letter in enumerate(word):
             temp += letter
-            if temp not in ptr.children and count + len(temp) == len(word):
-                return (False, 0)
+            if temp not in ptr.children and count + len(temp) == len(
+                word
+            ):  # a vérifier
+                pass
             if temp not in ptr.children:
                 pass
             else:
@@ -201,3 +202,110 @@ def fuse_haplogroups():
             with open(f"Data/Output/{file}", encoding="utf-8") as input_file:
                 for line in input_file.readlines()[1:]:
                     output_file.write(line.replace("\n", "") + f"  {file}\n")
+
+
+def supp_esp(line_file):
+    """Fonction qui supprime les espaces en début de ligne.
+    Function that removes spaces at the beginning of a line."""
+    if line_file.startswith(" "):  # Si la ligne commence par un espace
+        line_file = line_file.strip()  # Suppression des espaces
+    return line_file  # retourne la ligne sans les espaces en début de ligne
+
+
+def clean_haplo_line(haplo_line):
+    """Fonction qui prend la line de l'haplogroupe et rend uniquement l'haplogroupe.
+    Function that takes the haplogroup row and returns only the haplogroup."""
+    split_line = haplo_line.split()  # sépare la ligne selon les espaces
+    haplogroup = split_line[1].split('"')  # sépare la ligne selon les guillemets
+    return haplogroup[1]
+
+
+def clean_access_line(access_line):
+    """Fonction qui prend la ligne de l'accession et rend uniquement l'accession.
+    Function that takes the accession row and returns only the accession."""
+    split_line = access_line.split()
+    data = split_line[1].split('"')
+    accession = data[1]
+    return accession
+
+
+def parser(phylotree_file):
+    """Fonction qui lit le fichier phylotree et retroune les lignes correspondants aux haplogroupes et
+    celle correspondant aux accessions dans une liste de tuples (haplogroupe;accession).
+
+    Function that reads the phylotree file and returns rows corresponding to haplogroups and
+    the one corresponding to the accessions in a list of tuples (haplogroup;accession)."""
+
+    list_haplogroup = []  # Création d'une liste de stockage des lignes 'haplogroupes'
+    list_accession = []  # Création d'un liste de stokage des lignes 'accession'
+    bool = False  # Booléen pour vérification que chaque accession a été prise après un haplogroupe
+    with open(
+        phylotree_file, "r"
+    ) as phylo_data:  # On parcours le fichier 'phylotree' donné en entrée
+
+        for line in phylo_data:  # Pour chaque ligne...
+            line = supp_esp(line)  # Appel de la fonction qui supprime les espaces
+
+            if line.startswith(
+                "<haplogroup name="
+            ):  # Si la ligne correspond a l'haplogroupe
+                haplogroup = clean_haplo_line(
+                    line
+                )  # Appel de la fonction qui 'clean' la ligne
+                list_haplogroup.append(
+                    haplogroup
+                )  # on ajoute a la liste de stokage correspondante
+                bool = True
+            elif (
+                line.startswith("<details accessionNr=") and bool == True
+            ):  # Si la ligne correspond a l'accession et que la ligne d'avant était un haplogroupe
+                accession = clean_access_line(
+                    line
+                )  # Appel de la fonction qui 'clean' la ligne
+                list_accession.append(
+                    accession
+                )  # on ajoute a la liste de stokage correspondante
+                bool = False
+
+    """
+    print(len(list_accession))      #Vérification que le nombre d'accession et le nombre d'haplogroup sont égaux
+    print(len(list_haplogroup))
+    """
+
+    tuple_haplogroup_accession = list(zip(list_haplogroup, list_accession))
+    """
+    with open ('haplogroup_file', 'w') as file :    #creation de fichier contenant les listes (aide à la visualisation)
+        file.write(f'{list_haplogroup}')
+    with open ('accesion_file', 'w') as file : 
+        file.write(f'{list_accession}')
+    with open ('haplo_access_file', 'w') as file : 
+        file.write(f'{tuple_haplogroup_accession}')
+    """
+
+    return tuple_haplogroup_accession  # retourne les listes de stockages
+
+
+def haplogroupe_accession(phylotree_file, haplogroupe):
+    """Fonction qui donne l'accession depuis un haplogroupe donné.
+    Function that gives accession from a given haplogroup."""
+    tuple_haplo_access = parser(phylotree_file)  # Appel de la fonction parser
+
+    accession = ""
+    for i in range(
+        (len(tuple_haplo_access) - 1)
+    ):  # '-1' car dans python position 1 = 0 donc position n = n-1
+
+        if str(tuple_haplo_access[i][0]) == str(
+            haplogroupe
+        ):  # Si l'haplogroupe donné est le même que l'un provenant de la liste de tuple, On s'interesse a l'accession
+            if (
+                str(tuple_haplo_access[i][1]) == ""
+            ):  # S'il n'y en pas alors elle est égal a None
+                accession = None
+            else:
+                accession = tuple_haplo_access[i][
+                    1
+                ]  # Sinon elle prend la valeur de l'accession du tuple
+        else:
+            continue
+    return accession

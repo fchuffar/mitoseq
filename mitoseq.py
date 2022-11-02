@@ -1,6 +1,6 @@
 import os
 import argparse
-from function import haplogroup_count, fuse_haplogroups
+from function import haplogroup_count, fuse_haplogroups, haplogroupe_accession
 
 parser = argparse.ArgumentParser(description="test")
 parser.add_argument(
@@ -27,21 +27,26 @@ parser.add_argument(
 parser.add_argument(
     "-b",
     "--bank",
-    metavar="bank",
     type=str,
-    help="enter the bank file with all haplogroups",
+    help="Enter the bank file with all haplogroups",
     default="genbank_haplogroup_count.csv",
 )
 parser.add_argument(
     "-n",
     "--num",
-    metavar="num",
     type=int,
-    help="enter the minimum count to accept an haplogroup",
+    help="Enter the minimum count to accept an haplogroup",
     default=0,
 )
+parser.add_argument(
+    "-u",
+    "--tree",
+    type=str,
+    help="Enter the tree file which link haplogroup to accession number",
+    default="phylotree.txt",
+)
 args = parser.parse_args()
-
+"""
 ## Obtaining a sample list from the files existing in the samples folder
 if (
     len(os.listdir("Data/Input/Samples")) != 0
@@ -76,6 +81,16 @@ for sample in samples_list:
     os.system(prompt)
     if not args.keep:
         os.system("rm Data/Temp/*")
-
+"""
 fuse_haplogroups()
-print(haplogroup_count("haplogroups.txt", args.num, args.bank))
+haplogroups = haplogroup_count("haplogroups.txt", args.num, args.bank)
+print(haplogroups)
+for haplogroup in haplogroups:
+
+    access = haplogroupe_accession(args.tree, haplogroup[2])
+    if access == None:
+        print(f"No sequence for haplogroup {haplogroup[2]}")
+    else:
+        os.system(
+            f"efetch -db nuccore -id {access} -format fasta > Data/Output/{haplogroup[1]}.fasta"
+        )
