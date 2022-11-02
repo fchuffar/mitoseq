@@ -1,0 +1,10 @@
+name: MitoSeq
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - bwa
+  - samtools
+  - picard
+  - gatk4
+  - entrez-direct
