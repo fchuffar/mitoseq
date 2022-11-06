@@ -13,7 +13,7 @@ A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
 
     2) To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 
-    3) To setup the environnement: ```conda env update --file Env/config.yaml --name MitoSeq ; conda activate MitoSeq ; conda update --all --yes```
+    3) To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq ; conda update --all --yes```
 - All directory creation is configured in setup.sh:
 ```$ ./setup.sh```
 

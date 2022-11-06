@@ -133,7 +133,7 @@ def extract_haplogroups(filename: str) -> list:
     """
     result = []
     file_list = []
-    with open(file=f"Data/Output/{filename}", mode="r", encoding="utf-8") as file:
+    with open(file=f"data/output/{filename}", mode="r", encoding="utf-8") as file:
         for line in file.readlines()[1:]:
             result.append(line.split()[1].replace('"', ""))
             file_list.append(line.split()[5].replace('"', ""))
@@ -194,12 +194,12 @@ def haplogroup_count(haplogroup_file: list, num, bank) -> list:
 
 
 def fuse_haplogroups():
-    with open("Data/Output/haplogroups.txt", "w", encoding="utf-8") as output_file:
+    with open("data/output/haplogroups.txt", "w", encoding="utf-8") as output_file:
         output_file.write(
             '"SampleID"	"Haplogroup"	"Rank"	"Quality"	"Range"	"Origin_Filename"\n'
         )
-        for file in os.listdir("Data/Output/"):
-            with open(f"Data/Output/{file}", encoding="utf-8") as input_file:
+        for file in os.listdir("data/output/"):
+            with open(f"data/output/{file}", encoding="utf-8") as input_file:
                 for line in input_file.readlines()[1:]:
                     output_file.write(line.replace("\n", "") + f"  {file}\n")
 
