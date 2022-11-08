@@ -89,7 +89,7 @@ print(samples_list)
 
 ##Pipeline execution
 for sample in samples_list:
-    prompt = f"cd src ; snakemake -c {args.core} ../data/temp/{sample}.bam --config thread={args.thread}"
+    prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} ../data/output/{sample}.vcf"
     os.system(prompt)
     if not args.keep:
         os.system("rm data/temp/*")

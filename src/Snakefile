@@ -17,7 +17,7 @@ rule gunzip:
         PathToEnv
     shell: 
         """
-        parallel gunzip -k ::: $(ls {input})
+        parallel gunzip -k ::: {input}
         """
 
 
@@ -55,7 +55,7 @@ rule mapping:   # 1100s 4 threads
         "bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}"
 
 
-"""
+
 rule bam_index: # 58s 4 threads
     input:
         bam = PathToTemp + "{sample}.bam"
