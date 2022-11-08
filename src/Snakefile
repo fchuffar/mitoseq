@@ -120,7 +120,7 @@ rule build_index:
     conda:
         PathToEnv
     shell:
-        "picard BuildBamIndex I={input}"
+        "picard BuildBamIndex I={input} O={output}"
 
 
 rule variant_calling:   # 457s
@@ -136,3 +136,19 @@ rule variant_calling:   # 457s
         PathToEnv
     shell:
         "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+
+rule haplogrep:
+    input:
+        PathToOutput + "{sample}.vcf"
+    output:
+        PathToOutput + "{sample}.txt"
+    conda:
+        PathToEnv
+    shell:
+        """
+	haplogrep classify --in {input} --out {output} --format vcf
+	rm ../data/output/{wildcards.sample}.vcf.idx
+        rm ../data/output/{wildcards.sample}.vcf.stats
+        rm ../data/output/{wildcards.sample}.vcf
+	"""
+

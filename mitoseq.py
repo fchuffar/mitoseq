@@ -89,12 +89,12 @@ print(samples_list)
 
 ##Pipeline execution
 for sample in samples_list:
-    prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} ../data/output/{sample}.vcf"
+    prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} ../data/output/{sample}.txt"
     os.system(prompt)
     if not args.keep:
         os.system("rm data/temp/*")
 
-"""
+
 fuse_haplogroups()
 haplogroups = haplogroup_count("haplogroups.txt", args.num, args.bank)
 print(haplogroups)
@@ -107,4 +107,3 @@ for haplogroup in haplogroups:
         os.system(
             f"efetch -db nuccore -id {access} -format fasta > data/output/{haplogroup[1]}.fasta"
         )
-"""
