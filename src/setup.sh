@@ -3,16 +3,17 @@
 # Organize the working directories and download the reference sequence.
 # If any result of these command already exist, it will be skipped.
 
-# Stop on any error.
-set -ue
 
 # Creating the working directories.
 mkdir -p data/input/reference data/input/samples data/temp data/output
+
+# Creating the working directories.
+rm data/input/reference/.gitignore data/input/samples/.gitignore data/temp/.gitignore data/output/.gitignore 2> /dev/null
 
 # Moving to the reference directory.
 cd data/input/reference
 
 # if there is no reference file, download it.
 if test ! -f ref_mitochondrial.fasta ; then
-    efetch -db nuccore -id JQ705953 -format fasta > ref_mitochondrial.fasta
+    efetch -db nuccore -id "$1" -format fasta > ref_mitochondrial.fasta
 fi

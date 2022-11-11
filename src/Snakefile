@@ -55,7 +55,6 @@ rule mapping:   # 1100s 4 threads
         "bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}"
 
 
-
 rule bam_index: # 58s 4 threads
     input:
         bam = PathToTemp + "{sample}.bam"
@@ -75,7 +74,7 @@ rule add_groups:
     conda:
         PathToEnv
     shell:
-        "picard AddOrReplaceReadGroups I={input.bam} O={output.bam} RGLB=lib.HSmt RGPL=illumina RGPU='NO_GROUP' RGSM=20"
+        "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM 20"
 
 
 rule mark:
@@ -109,7 +108,7 @@ rule sort:
     conda:
         PathToEnv
     shell:
-        "picard FixMateInformation I={input} SO=coordinate O={output}"
+        "picard FixMateInformation -I {input} -O {output} -SO coordinate"
 
 
 rule build_index:
@@ -120,7 +119,7 @@ rule build_index:
     conda:
         PathToEnv
     shell:
-        "picard BuildBamIndex I={input} O={output}"
+        "picard BuildBamIndex -I {input} -O {output}"
 
 
 rule variant_calling:   # 457s
@@ -137,7 +136,8 @@ rule variant_calling:   # 457s
     shell:
         "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
-rule haplogrep:
+
+rule find_haplogroup:
     input:
         PathToOutput + "{sample}.vcf"
     output:
@@ -146,9 +146,8 @@ rule haplogrep:
         PathToEnv
     shell:
         """
-	haplogrep classify --in {input} --out {output} --format vcf
-	rm ../data/output/{wildcards.sample}.vcf.idx
+	    haplogrep classify --in {input} --out {output} --format vcf
+	    rm ../data/output/{wildcards.sample}.vcf.idx
         rm ../data/output/{wildcards.sample}.vcf.stats
         rm ../data/output/{wildcards.sample}.vcf
-	"""
-
+	    """
