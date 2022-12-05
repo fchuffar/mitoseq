@@ -74,7 +74,7 @@ rule add_groups:
     conda:
         PathToEnv
     shell:
-        "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM 20"
+        "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM " + "{sample}"
 
 
 rule mark:
