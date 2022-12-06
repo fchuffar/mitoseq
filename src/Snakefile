@@ -25,10 +25,10 @@ rule index:
     input:
         reference = PathToRef + "ref_mitochondrial.fasta"
     output:
-        sample_fasta = PathToTemp + "{sample}.fasta",
-        bwa_index = PathToTemp + "{sample}.fasta.bwt",
-        fai_index = PathToTemp + "{sample}.fasta.fai",
-        dictionary = PathToTemp + "{sample}.dict"
+        sample_fasta = PathToTemp + "ref_mitochondrial.fasta",
+        bwa_index = PathToTemp + "ref_mitochondrial.fasta.bwt",
+        fai_index = PathToTemp + "ref_mitochondrial.fasta.fai",
+        dictionary = PathToTemp + "ref_mitochondrial.dict"
     conda:
         PathToEnv
     shell:
@@ -42,24 +42,27 @@ rule index:
 
 rule mapping:   # 1100s 4 threads
     input:
-        reference = PathToTemp + "{sample}.fasta",
+        paz = PathToTemp + "{sample}/",
+        reference = PathToTemp + "ref_mitochondrial.fasta",
         R1 = PathToRaw + "{sample}_R1.fastq",
         R2 = PathToRaw + "{sample}_R2.fastq"
     params:
-        thread = config['thread']
+        thread = config['thread'] / 2
     output:
-        PathToTemp + "{sample}.bam"
+        PathToTemp + "{sample}/{sample}.bam"
     conda:
         PathToEnv
     shell:
-        "bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}"
+        """
+        bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
+        """
 
 
 rule bam_index: # 58s 4 threads
     input:
-        bam = PathToTemp + "{sample}.bam"
+        bam = PathToTemp + "{sample}/{sample}.bam"
     output:
-        bam_ind = PathToTemp + "{sample}.bam.bai"
+        bam_ind = PathToTemp + "{sample}/{sample}.bam.bai"
     conda:
         PathToEnv
     shell:
@@ -68,21 +71,23 @@ rule bam_index: # 58s 4 threads
 
 rule add_groups:
     input:
-        bam = PathToTemp + "{sample}.bam"
+        bam = PathToTemp + "{sample}/{sample}.bam"
     output:
-        bam = PathToTemp + "{sample}.groups.bam"
+        bam = PathToTemp + "{sample}/{sample}.groups.bam"
+    params:
+        name = "{sample}"
     conda:
         PathToEnv
     shell:
-        "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM " + "{sample}"
+        "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM {params.name}"
 
 
 rule mark:
     input:
-        bam_ind = PathToTemp + "{sample}.bam.bai",
-        bam = PathToTemp + "{sample}.groups.bam"
+        bam_ind = PathToTemp + "{sample}/{sample}.bam.bai",
+        bam = PathToTemp + "{sample}/{sample}.groups.bam"
     output:
-        bam_marked = PathToTemp + "{sample}.marked.bam"
+        bam_marked = PathToTemp + "{sample}/{sample}.marked.bam"
     conda:
         PathToEnv
     shell:
@@ -91,9 +96,9 @@ rule mark:
 
 rule filter:
     input:
-        bam = PathToTemp + "{sample}.marked.bam"
+        bam = PathToTemp + "{sample}/{sample}.marked.bam"
     output:
-        bam_filtered = PathToTemp + "{sample}.filtered.bam"
+        bam_filtered = PathToTemp + "{sample}/{sample}.filtered.bam"
     conda:
         PathToEnv
     shell:
@@ -102,9 +107,9 @@ rule filter:
 
 rule sort:
     input:
-        PathToTemp + "{sample}.filtered.bam"
+        PathToTemp + "{sample}/{sample}.filtered.bam"
     output:
-        PathToTemp + "{sample}.sorted.bam"
+        PathToTemp + "{sample}/{sample}.sorted.bam"
     conda:
         PathToEnv
     shell:
@@ -113,9 +118,9 @@ rule sort:
 
 rule build_index:
     input:
-        PathToTemp + "{sample}.sorted.bam"
+        PathToTemp + "{sample}/{sample}.sorted.bam"
     output:
-        PathToTemp + "{sample}.sorted.bai"
+        PathToTemp + "{sample}/{sample}.sorted.bai"
     conda:
         PathToEnv
     shell:
@@ -124,13 +129,13 @@ rule build_index:
 
 rule variant_calling:   # 457s
     input:
-        PathToTemp + "{sample}.sorted.bai",
-        reference = PathToTemp + "{sample}.fasta",
-        target_bam = PathToTemp + "{sample}.sorted.bam"
+        PathToTemp + "{sample}/{sample}.sorted.bai",
+        reference = PathToTemp + "ref_mitochondrial.fasta",
+        target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
     output:
         PathToOutput + "{sample}.vcf"
     params:
-        thread = config['thread']
+        thread = config['thread'] / 2
     conda:
         PathToEnv
     shell:

@@ -80,21 +80,20 @@ os.system(f"rm {PathToTempSamples}.txt")
 samples_list = []
 for line in files:
     if line.find("_R1.f") == -1:
-        raise TypeError(f"The {line} doesn't seem to be a .fastq file")
-    sample = line[: line.find("_R1.f")]
-    samples_list.append(sample)
-
-print(samples_list)
-
+        continue
+        # raise TypeError(f"The {line} doesn't seem to be a .fastq file")
+    else:
+        sample = line[: line.find("_R1.f")]
+        samples_list.append(f"../data/output/{sample}.txt")
+        os.system(f"mkdir -p data/temp/{sample}")
 
 ##Pipeline execution
-for sample in samples_list:
-    prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} ../data/output/{sample}.txt"
-    os.system(prompt)
-    if not args.keep:
-        os.system("rm data/temp/* 2> /dev/null")
+prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} {' '.join(samples_list)}"
+os.system(prompt)
+if not args.keep:
+    os.system("rm data/temp/* 2> /dev/null")
 
-
+"""
 fuse_haplogroups()
 haplogroups = haplogroup_count("haplogroups.txt", args.num, args.bank)
 print(haplogroups)
@@ -107,3 +106,4 @@ for haplogroup in haplogroups:
         os.system(
             f"efetch -db nuccore -id {access} -format fasta > data/output/{haplogroup[1]}.fasta"
         )
+"""
