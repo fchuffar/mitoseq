@@ -13,7 +13,7 @@ rm data/input/reference/.gitignore data/input/samples/.gitignore data/temp/.giti
 # Moving to the reference directory.
 cd data/input/reference
 
-# if there is no reference file, download it.
-if test ! -f ref_mitochondrial.fasta ; then
+# if there is no reference file, download the michondria reference.
+if test 0 -eq $(ls | wc -l) ; then
     efetch -db nuccore -id "$1" -format fasta > ref_mitochondrial.fasta
 fi

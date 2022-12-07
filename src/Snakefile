@@ -4,7 +4,7 @@ PathToRaw = '../data/input/samples/'
 PathToTemp = '../data/temp/'
 PathToOutput = '../data/output/'
 PathToEnv = 'environment/env.yml'
-
+ReferenceName = config['referenceName']
 
 rule gunzip:
     input:
@@ -23,12 +23,12 @@ rule gunzip:
 
 rule index:
     input:
-        reference = ancient(PathToRef + "ref_mitochondrial.fasta")
+        reference = ancient(PathToRef + f"{ReferenceName}.fasta")
     output:
-        sample_fasta = PathToTemp + "ref_mitochondrial.fasta",
-        bwa_index = PathToTemp + "ref_mitochondrial.fasta.bwt",
-        fai_index = PathToTemp + "ref_mitochondrial.fasta.fai",
-        dictionary = PathToTemp + "ref_mitochondrial.dict"
+        sample_fasta = PathToTemp + f"{ReferenceName}.fasta",
+        bwa_index = PathToTemp + f"{ReferenceName}.fasta.bwt",
+        fai_index = PathToTemp + f"{ReferenceName}.fasta.fai",
+        dictionary = PathToTemp + f"{ReferenceName}.dict"
     conda:
         PathToEnv
     shell:
@@ -43,7 +43,7 @@ rule index:
 rule mapping:   # 1100s 4 threads
     input:
         paz = ancient(PathToTemp + "{sample}/"),
-        reference = ancient(PathToTemp + "ref_mitochondrial.fasta"),
+        reference = ancient(PathToTemp + f"{ReferenceName}.fasta"),
         R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
         R2 = ancient(PathToRaw + "{sample}_R2.fastq")
     params:
@@ -57,7 +57,7 @@ rule mapping:   # 1100s 4 threads
         bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
         """
 
-
+"""
 rule bam_index: # 58s 4 threads
     input:
         bam = ancient(PathToTemp + "{sample}/{sample}.bam")
@@ -67,7 +67,7 @@ rule bam_index: # 58s 4 threads
         PathToEnv
     shell:
         "samtools index {input.bam}"
-
+"""
 
 rule add_groups:
     input:
@@ -81,7 +81,7 @@ rule add_groups:
     shell:
         "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM {params.name}"
 
-
+"""
 rule mark:
     input:
         bam_ind = PathToTemp + "{sample}/{sample}.bam.bai",
@@ -103,11 +103,11 @@ rule filter:
         PathToEnv
     shell:
         "samtools view -h -@ 4 -f  0x2 -F 0x4 -F 0x8 -F 0x100 {input.bam} | samtools view -bh -@ 4 -o {output.bam_filtered}"
-
+"""
 
 rule sort:
     input:
-        PathToTemp + "{sample}/{sample}.filtered.bam"
+        PathToTemp + "{sample}/{sample}.groups.bam"
     output:
         PathToTemp + "{sample}/{sample}.sorted.bam"
     conda:
@@ -130,7 +130,7 @@ if config['consensus']:
     rule consensus:   # 457s
         input:
             PathToTemp + "{sample}/{sample}.sorted.bai",
-            reference = PathToTemp + "ref_mitochondrial.fasta",
+            reference = PathToTemp + f"{ReferenceName}.fasta",
             target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
         output:
             PathToTemp + "{sample}/{sample}.fasta"
@@ -153,7 +153,7 @@ else:
     rule variant_calling:   # 457s
         input:
             PathToTemp + "{sample}/{sample}.sorted.bai",
-            reference = PathToTemp + "ref_mitochondrial.fasta",
+            reference = PathToTemp + f"{ReferenceName}.fasta",
             target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
         output:
             PathToOutput + "{sample}.vcf"
@@ -165,9 +165,21 @@ else:
             "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
 
+    rule variant_filter:
+        input:
+            vcf = PathToOutput + "{sample}.vcf",
+            reference = PathToTemp + f"{ReferenceName}.fasta",
+        output:
+            PathToOutput + "{sample}.filtered.vcf"
+        conda:
+            PathToEnv
+        shell:
+            "gatk FilterMutectCalls --mitochondria-mode -R {input.reference} -V {input.vcf} -O {output}"
+
+
     rule find_haplogroup_vcf:
         input:
-            PathToOutput + "{sample}.vcf"
+            PathToOutput + "{sample}.filtered.vcf"
         output:
             PathToOutput + "{sample}.txt"
         conda:
@@ -178,4 +190,9 @@ else:
             rm ../data/output/{wildcards.sample}.vcf.idx
             rm ../data/output/{wildcards.sample}.vcf.stats
             rm ../data/output/{wildcards.sample}.vcf
+            rm ../data/output/{wildcards.sample}.filtered.vcf
+            rm ../data/output/{wildcards.sample}.filtered.vcf.idx
+            rm ../data/output/{wildcards.sample}.filtered.vcf.filteringStats.tsv
             """
+
+        

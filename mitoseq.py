@@ -3,6 +3,7 @@ import argparse
 from src.utils import haplogroup_count, fuse_haplogroups, haplogroupe_accession
 
 PathToRaw = "data/input/samples/"
+PathToRef = "data/input/reference/"
 PathToTempSamples = "data/temp/samples"
 
 parser = argparse.ArgumentParser(description="Every argument is optional")
@@ -67,6 +68,13 @@ args = parser.parse_args()
 
 os.system(f"src/setup.sh {args.reference}")
 
+if len(os.listdir(PathToRef)) > 1:
+    raise Exception(
+        f"Too many references files in {PathToRef} directory, there should only be one"
+    )
+
+referenceName = os.listdir(PathToRef)[0].replace(".fasta", "")
+
 
 ## Obtaining a sample list from the files existing in the samples folder
 if len(os.listdir(PathToRaw)) == 0:
@@ -95,7 +103,7 @@ for line in files:
         os.system(f"mkdir -p data/temp/{sample}")
 
 ##Pipeline execution
-prompt = f"cd src ; snakemake --rerun-incomplete --config thread={args.thread} consensus={args.consensus} -c {args.core} {' '.join(samples_list)}"
+prompt = f"cd src ; snakemake --rerun-incomplete --config thread={args.thread} consensus={args.consensus} referenceName={referenceName} -c {args.core} {' '.join(samples_list)}"
 os.system(prompt)
 if not args.keep:
     os.system("rm -rf data/temp/* 2> /dev/null")
