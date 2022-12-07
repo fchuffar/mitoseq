@@ -88,7 +88,7 @@ for line in files:
         os.system(f"mkdir -p data/temp/{sample}")
 
 ##Pipeline execution
-prompt = f"cd src ; snakemake --config thread={args.thread} -c {args.core} {' '.join(samples_list)}"
+prompt = f"cd src ; snakemake --rerun-incomplete --config thread={args.thread} -c {args.core} {' '.join(samples_list)}"
 os.system(prompt)
 if not args.keep:
     os.system("rm data/temp/* 2> /dev/null")

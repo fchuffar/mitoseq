@@ -8,8 +8,8 @@ PathToEnv = 'environment/env.yml'
 
 rule gunzip:
     input:
-        R1 = PathToRaw + "{sample}_R1.fastq.gz",
-        R2 = PathToRaw + "{sample}_R2.fastq.gz"
+        R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
+        R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
     output:
         R1 = PathToRaw + "{sample}_R1.fastq",
         R2 = PathToRaw + "{sample}_R2.fastq"
@@ -23,7 +23,7 @@ rule gunzip:
 
 rule index:
     input:
-        reference = PathToRef + "ref_mitochondrial.fasta"
+        reference = ancient(PathToRef + "ref_mitochondrial.fasta")
     output:
         sample_fasta = PathToTemp + "ref_mitochondrial.fasta",
         bwa_index = PathToTemp + "ref_mitochondrial.fasta.bwt",
@@ -42,12 +42,12 @@ rule index:
 
 rule mapping:   # 1100s 4 threads
     input:
-        paz = PathToTemp + "{sample}/",
-        reference = PathToTemp + "ref_mitochondrial.fasta",
-        R1 = PathToRaw + "{sample}_R1.fastq",
-        R2 = PathToRaw + "{sample}_R2.fastq"
+        paz = ancient(PathToTemp + "{sample}/"),
+        reference = ancient(PathToTemp + "ref_mitochondrial.fasta"),
+        R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
+        R2 = ancient(PathToRaw + "{sample}_R2.fastq")
     params:
-        thread = config['thread'] / 2
+        thread = config['thread']
     output:
         PathToTemp + "{sample}/{sample}.bam"
     conda:
@@ -60,7 +60,7 @@ rule mapping:   # 1100s 4 threads
 
 rule bam_index: # 58s 4 threads
     input:
-        bam = PathToTemp + "{sample}/{sample}.bam"
+        bam = ancient(PathToTemp + "{sample}/{sample}.bam")
     output:
         bam_ind = PathToTemp + "{sample}/{sample}.bam.bai"
     conda:
@@ -71,7 +71,7 @@ rule bam_index: # 58s 4 threads
 
 rule add_groups:
     input:
-        bam = PathToTemp + "{sample}/{sample}.bam"
+        bam = ancient(PathToTemp + "{sample}/{sample}.bam")
     output:
         bam = PathToTemp + "{sample}/{sample}.groups.bam"
     params:
@@ -135,7 +135,7 @@ rule variant_calling:   # 457s
     output:
         PathToOutput + "{sample}.vcf"
     params:
-        thread = config['thread'] / 2
+        thread = config['thread']
     conda:
         PathToEnv
     shell:
