@@ -55,6 +55,13 @@ parser.add_argument(
     help='Enter the reference accession number, the default one point to the mitochondria reference (default="JQ705953")',
     default="JQ705953",
 )
+parser.add_argument(
+    "-s",
+    "--consensus",
+    action="store_true",
+    help="Use consensus method for haplogrep (default=False)",
+    default=False,
+)
 args = parser.parse_args()
 
 
@@ -88,13 +95,14 @@ for line in files:
         os.system(f"mkdir -p data/temp/{sample}")
 
 ##Pipeline execution
-prompt = f"cd src ; snakemake --rerun-incomplete --config thread={args.thread} -c {args.core} {' '.join(samples_list)}"
+prompt = f"cd src ; snakemake --rerun-incomplete --config thread={args.thread} consensus={args.consensus} -c {args.core} {' '.join(samples_list)}"
 os.system(prompt)
 if not args.keep:
-    os.system("rm data/temp/* 2> /dev/null")
+    os.system("rm -rf data/temp/* 2> /dev/null")
 
-"""
+
 fuse_haplogroups()
+"""
 haplogroups = haplogroup_count("haplogroups.txt", args.num, args.bank)
 print(haplogroups)
 for haplogroup in haplogroups:
@@ -107,3 +115,4 @@ for haplogroup in haplogroups:
             f"efetch -db nuccore -id {access} -format fasta > data/output/{haplogroup[1]}.fasta"
         )
 """
+os.system("column -t data/output/haplogroups.txt")

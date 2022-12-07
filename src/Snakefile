@@ -126,33 +126,56 @@ rule build_index:
     shell:
         "picard BuildBamIndex -I {input} -O {output}"
 
+if config['consensus']:
+    rule consensus:   # 457s
+        input:
+            PathToTemp + "{sample}/{sample}.sorted.bai",
+            reference = PathToTemp + "ref_mitochondrial.fasta",
+            target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
+        output:
+            PathToTemp + "{sample}/{sample}.fasta"
+        conda:
+            PathToEnv
+        shell:
+            "samtools consensus -f fasta -a {input.target_bam} -o {output}"
+    
 
-rule variant_calling:   # 457s
-    input:
-        PathToTemp + "{sample}/{sample}.sorted.bai",
-        reference = PathToTemp + "ref_mitochondrial.fasta",
-        target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
-    output:
-        PathToOutput + "{sample}.vcf"
-    params:
-        thread = config['thread']
-    conda:
-        PathToEnv
-    shell:
-        "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+    rule find_haplogroup_consensus:
+        input:
+            PathToTemp + "{sample}/{sample}.fasta"
+        output:
+            PathToOutput + "{sample}.txt"
+        conda:
+            PathToEnv
+        shell:
+            "haplogrep classify --in {input} --out {output} --format fasta"
+else:
+    rule variant_calling:   # 457s
+        input:
+            PathToTemp + "{sample}/{sample}.sorted.bai",
+            reference = PathToTemp + "ref_mitochondrial.fasta",
+            target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
+        output:
+            PathToOutput + "{sample}.vcf"
+        params:
+            thread = config['thread']
+        conda:
+            PathToEnv
+        shell:
+            "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
 
-rule find_haplogroup:
-    input:
-        PathToOutput + "{sample}.vcf"
-    output:
-        PathToOutput + "{sample}.txt"
-    conda:
-        PathToEnv
-    shell:
-        """
-	    haplogrep classify --in {input} --out {output} --format vcf
-	    rm ../data/output/{wildcards.sample}.vcf.idx
-        rm ../data/output/{wildcards.sample}.vcf.stats
-        rm ../data/output/{wildcards.sample}.vcf
-	    """
+    rule find_haplogroup_vcf:
+        input:
+            PathToOutput + "{sample}.vcf"
+        output:
+            PathToOutput + "{sample}.txt"
+        conda:
+            PathToEnv
+        shell:
+            """
+            haplogrep classify --in {input} --out {output} --format vcf
+            rm ../data/output/{wildcards.sample}.vcf.idx
+            rm ../data/output/{wildcards.sample}.vcf.stats
+            rm ../data/output/{wildcards.sample}.vcf
+            """
