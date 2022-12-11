@@ -5,10 +5,10 @@
 
 
 # Creating the working directories.
-mkdir -p data/input/reference data/input/samples data/temp data/output
+mkdir -p data/input/reference data/input/samples data/input/gtf data/temp data/output
 
 # Creating the working directories.
-rm data/input/reference/.gitignore data/input/samples/.gitignore data/temp/.gitignore data/output/.gitignore 2> /dev/null
+rm data/input/reference/.gitignore data/input/samples/.gitignore data/input/gtf/.gitignore 2> /dev/null
 
 # Moving to the reference directory.
 cd data/input/reference

@@ -1,73 +1,151 @@
 # Paths 
-PathToRef = '../data/input/reference/'
 PathToRaw = '../data/input/samples/'
+PathToRef = '../data/input/reference/'
+PathToGtf = '../data/input/gtf/'
+PathToRefTemp = '../data/temp/reference/'
 PathToTemp = '../data/temp/'
 PathToOutput = '../data/output/'
 PathToEnv = 'environment/env.yml'
 ReferenceName = config['referenceName']
-
-rule gunzip:
-    input:
-        R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
-        R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
-    output:
-        R1 = PathToRaw + "{sample}_R1.fastq",
-        R2 = PathToRaw + "{sample}_R2.fastq"
-    conda:
-        PathToEnv
-    shell: 
-        """
-        parallel gunzip -k ::: {input}
-        """
+GtfName = config['gtfName']
 
 
 rule index:
     input:
         reference = ancient(PathToRef + f"{ReferenceName}.fasta")
     output:
-        sample_fasta = PathToTemp + f"{ReferenceName}.fasta",
-        bwa_index = PathToTemp + f"{ReferenceName}.fasta.bwt",
-        fai_index = PathToTemp + f"{ReferenceName}.fasta.fai",
-        dictionary = PathToTemp + f"{ReferenceName}.dict"
+        sample_fasta = PathToRefTemp + f"{ReferenceName}.fasta",
+        bwa_index = PathToRefTemp + f"{ReferenceName}.fasta.bwt",
+        fai_index = PathToRefTemp + f"{ReferenceName}.fasta.fai",
+        dictionary = PathToRefTemp + f"{ReferenceName}.dict"
     conda:
         PathToEnv
     shell:
         """
         cp {input.reference} {output.sample_fasta}
-        bwa index {output.sample_fasta}
+        bwa index -a bwtsw {output.sample_fasta}
         samtools faidx {output.sample_fasta}
         gatk CreateSequenceDictionary -R {output.sample_fasta} 
         """
 
+if not config['star']:
+    rule mapping_bwa_fastq:
+        input:
+            paz = ancient(PathToTemp + "{sample}/"),
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            
+            R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
+            R2 = ancient(PathToRaw + "{sample}_R2.fastq")
+        params:
+            thread = config['thread']
+        output:
+            PathToTemp + "{sample}/{sample}.bam"
+        conda:
+            PathToEnv
+        shell:
+            """
+            bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
+            """
 
-rule mapping:   # 1100s 4 threads
-    input:
-        paz = ancient(PathToTemp + "{sample}/"),
-        reference = ancient(PathToTemp + f"{ReferenceName}.fasta"),
-        R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
-        R2 = ancient(PathToRaw + "{sample}_R2.fastq")
-    params:
-        thread = config['thread']
-    output:
-        PathToTemp + "{sample}/{sample}.bam"
-    conda:
-        PathToEnv
-    shell:
-        """
-        bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
-        """
 
-"""
-rule bam_index: # 58s 4 threads
-    input:
-        bam = ancient(PathToTemp + "{sample}/{sample}.bam")
-    output:
-        bam_ind = PathToTemp + "{sample}/{sample}.bam.bai"
-    conda:
-        PathToEnv
-    shell:
-        "samtools index {input.bam}"
-"""
+    rule mapping_bwa_gz:
+        input:
+            paz = ancient(PathToTemp + "{sample}/"),
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            
+            R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
+            R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
+        params:
+            thread = config['thread']
+        output:
+            PathToTemp + "{sample}/{sample}.bam"
+        conda:
+            PathToEnv
+        shell:
+            """
+            bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
+            """
+
+else:
+    rule index_star:
+            input:
+                reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+                gtf = ancient(PathToGtf + f"{GtfName}.gtf"),
+                genomeDir = ancient(PathToTemp + "genomeDir")
+            params:
+                thread = config['thread']
+            output:
+                PathToTemp + "genomeDir/SA"
+            conda:
+                PathToEnv
+            shell:
+                """
+                STAR --runThreadN {params.thread} \
+                --runMode genomeGenerate \
+                --genomeDir {input.genomeDir} \
+                --genomeFastaFiles {input.reference} \
+                --sjdbGTFfile {input.gtf} \
+                --sjdbOverhang 99 \
+                --genomeSAindexNbases 6
+                """
+    
+
+    rule mapping_star_fastq:
+            input:
+                ahi = ancient(PathToTemp + "genomeDir/SA"),
+                genomeDir = ancient(PathToTemp + "genomeDir"),
+                R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
+                R2 = ancient(PathToRaw + "{sample}_R2.fastq")
+            params:
+                thread = config['thread'],
+                paz = PathToTemp + "{sample}/{sample}.",
+                paz2 = PathToTemp + "{sample}/{sample}.sam"
+            output:
+                PathToTemp + "{sample}/{sample}.bam"
+            conda:
+                PathToEnv
+            shell:
+                """
+                STAR --runThreadN {params.thread} \
+                --genomeDir {input.genomeDir} \
+                --readFilesIn {input.R1} {input.R2} \
+                --outFileNamePrefix {params.paz} \
+                --outSAMmapqUnique 255
+                
+                mv {params.paz}Aligned.out.sam {params.paz2}
+
+                samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
+                """
+
+
+    rule mapping_star_gz:
+            input:
+                ahi = ancient(PathToTemp + "genomeDir/SA"),
+                genomeDir = ancient(PathToTemp + "genomeDir"),
+                R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
+                R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
+            params:
+                thread = config['thread'],
+                paz = PathToTemp + "{sample}/{sample}.",
+                paz2 = PathToTemp + "{sample}/{sample}.sam"
+            output:
+                PathToTemp + "{sample}/{sample}.bam"
+            conda:
+                PathToEnv
+            shell:
+                """
+                STAR --runThreadN {params.thread} \
+                --genomeDir {input.genomeDir} \
+                --readFilesIn {input.R1} {input.R2} \
+                --outFileNamePrefix {params.paz} \
+                --outSAMmapqUnique 255 \
+                --readFilesCommand gunzip -c
+                
+                mv {params.paz}Aligned.out.sam {params.paz2}
+
+                samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
+                """
+
 
 rule add_groups:
     input:
@@ -81,33 +159,10 @@ rule add_groups:
     shell:
         "picard AddOrReplaceReadGroups -I {input.bam} -O {output.bam} -RGLB lib.HSmt -RGPL illumina -RGPU NO_GROUP -RGSM {params.name}"
 
-"""
-rule mark:
-    input:
-        bam_ind = PathToTemp + "{sample}/{sample}.bam.bai",
-        bam = PathToTemp + "{sample}/{sample}.groups.bam"
-    output:
-        bam_marked = PathToTemp + "{sample}/{sample}.marked.bam"
-    conda:
-        PathToEnv
-    shell:
-        "gatk MarkDuplicatesSpark -I {input.bam} -O {output.bam_marked}" 
-
-
-rule filter:
-    input:
-        bam = PathToTemp + "{sample}/{sample}.marked.bam"
-    output:
-        bam_filtered = PathToTemp + "{sample}/{sample}.filtered.bam"
-    conda:
-        PathToEnv
-    shell:
-        "samtools view -h -@ 4 -f  0x2 -F 0x4 -F 0x8 -F 0x100 {input.bam} | samtools view -bh -@ 4 -o {output.bam_filtered}"
-"""
 
 rule sort:
     input:
-        PathToTemp + "{sample}/{sample}.groups.bam"
+        ancient(PathToTemp + "{sample}/{sample}.groups.bam")
     output:
         PathToTemp + "{sample}/{sample}.sorted.bam"
     conda:
@@ -118,7 +173,7 @@ rule sort:
 
 rule build_index:
     input:
-        PathToTemp + "{sample}/{sample}.sorted.bam"
+        ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
     output:
         PathToTemp + "{sample}/{sample}.sorted.bai"
     conda:
@@ -126,12 +181,13 @@ rule build_index:
     shell:
         "picard BuildBamIndex -I {input} -O {output}"
 
+
 if config['consensus']:
-    rule consensus:   # 457s
+    rule consensus:
         input:
-            PathToTemp + "{sample}/{sample}.sorted.bai",
-            reference = PathToTemp + f"{ReferenceName}.fasta",
-            target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
+            ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
         output:
             PathToTemp + "{sample}/{sample}.fasta"
         conda:
@@ -142,35 +198,42 @@ if config['consensus']:
 
     rule find_haplogroup_consensus:
         input:
-            PathToTemp + "{sample}/{sample}.fasta"
+            result = ancient(PathToTemp + "{sample}/{sample}.fasta"),
+            the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
+        params:
+            keep = config['keep']
         conda:
             PathToEnv
         shell:
-            "haplogrep classify --in {input} --out {output} --format fasta"
+            """
+            haplogrep classify --in {input.result} --out {output} --format fasta
+            if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
+            """
+
 else:
-    rule variant_calling:   # 457s
+    rule variant_calling:
         input:
-            PathToTemp + "{sample}/{sample}.sorted.bai",
-            reference = PathToTemp + f"{ReferenceName}.fasta",
-            target_bam = PathToTemp + "{sample}/{sample}.sorted.bam"
+            ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
         output:
-            PathToOutput + "{sample}.vcf"
+            PathToTemp + "{sample}/{sample}.vcf"
         params:
             thread = config['thread']
         conda:
             PathToEnv
         shell:
-            "gatk Mutect2 --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+            "gatk Mutect2 --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
 
     rule variant_filter:
         input:
-            vcf = PathToOutput + "{sample}.vcf",
-            reference = PathToTemp + f"{ReferenceName}.fasta",
+            vcf = ancient(PathToTemp + "{sample}/{sample}.vcf"),
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
         output:
-            PathToOutput + "{sample}.filtered.vcf"
+            PathToTemp + "{sample}/{sample}.filtered.vcf"
         conda:
             PathToEnv
         shell:
@@ -179,20 +242,16 @@ else:
 
     rule find_haplogroup_vcf:
         input:
-            PathToOutput + "{sample}.filtered.vcf"
+            vcf = ancient(PathToTemp + "{sample}/{sample}.filtered.vcf"),
+            the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
+        params:
+            keep = config['keep']
         conda:
             PathToEnv
         shell:
             """
-            haplogrep classify --in {input} --out {output} --format vcf
-            rm ../data/output/{wildcards.sample}.vcf.idx
-            rm ../data/output/{wildcards.sample}.vcf.stats
-            rm ../data/output/{wildcards.sample}.vcf
-            rm ../data/output/{wildcards.sample}.filtered.vcf
-            rm ../data/output/{wildcards.sample}.filtered.vcf.idx
-            rm ../data/output/{wildcards.sample}.filtered.vcf.filteringStats.tsv
+            haplogrep classify --in {input.vcf} --out {output} --format vcf
+            if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """
-
-        
