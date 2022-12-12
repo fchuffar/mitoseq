@@ -39,6 +39,7 @@ reference.fasta-->Index;
 BAM-->Filtered.bam;
 Filtered.bam-->Variant_calling;
 Index-->Variant_calling;
-Variant_calling-->VCF
+Variant_calling-->VCF;
+VCF-->Haplogrep
 
 ```
