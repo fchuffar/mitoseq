@@ -1,4 +1,4 @@
-data/output
-data/temp
-src/.snakemake
-scr/__pycache__
+data/output/
+data/temp/
+src/.snakemake/
+scr/__pycache__/
