@@ -13,7 +13,8 @@ GtfName = config['gtfName']
 
 rule index:
     input:
-        reference = ancient(PathToRef + f"{ReferenceName}.fasta")
+        reference = ancient(PathToRef + f"{ReferenceName}.fasta"),
+	mitochondria = Mitochondria
     output:
         sample_fasta = PathToRefTemp + f"{ReferenceName}.fasta",
         bwa_index = PathToRefTemp + f"{ReferenceName}.fasta.bwt",
@@ -24,7 +25,11 @@ rule index:
     shell:
         """
         cp {input.reference} {output.sample_fasta}
-        bwa index -a bwtsw {output.sample_fasta}
+	bwa index -a bwtsw {input.mitochondria}       
+	samtools faidx {input.mitochondria}
+	gatk CreateSequenceDictionary -R {input.mitochondria}
+
+	bwa index -a bwtsw {output.sample_fasta}
         samtools faidx {output.sample_fasta}
         gatk CreateSequenceDictionary -R {output.sample_fasta} 
         """
@@ -148,6 +153,7 @@ else:
                 samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
                 """
 
+
 rule extract_mito:
     input:
         ancient(PathToTemp + "{sample}/{sample}.temp.bam")
@@ -156,7 +162,10 @@ rule extract_mito:
     conda:
         PathToEnv
     shell:
-        "samtools view {input} chrM -bh > {output}"
+        """
+	samtools index {input}
+	samtools view {input} chrM -bh > {output}
+	"""
 
 
 rule add_groups:
@@ -210,7 +219,7 @@ if config['consensus']:
 
     rule find_haplogroup_consensus:
         input:
-            result = ancient(Mitochondria),
+            result = ancient(PathToTemp + "{sample}/{sample}.fasta"),
             the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
@@ -229,7 +238,7 @@ else:
         input:
             ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
             reference = ancient(Mitochondria),
-            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")            
         output:
             PathToTemp + "{sample}/{sample}.vcf"
         params:
@@ -237,7 +246,7 @@ else:
         conda:
             PathToEnv
         shell:
-            "gatk Mutect2 --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+            "gatk Mutect2 -L chrM --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
 
     rule variant_filter:
