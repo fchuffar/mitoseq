@@ -1,6 +1,7 @@
 # Paths 
 PathToRaw = '../data/input/samples/'
 PathToRef = '../data/input/reference/'
+Mitochondria = '../data/input/mitochondria/mitochondria.fasta'
 PathToGtf = '../data/input/gtf/'
 PathToRefTemp = '../data/temp/reference/'
 PathToTemp = '../data/temp/'
@@ -28,6 +29,7 @@ rule index:
         gatk CreateSequenceDictionary -R {output.sample_fasta} 
         """
 
+
 if not config['star']:
     rule mapping_bwa_fastq:
         input:
@@ -39,7 +41,7 @@ if not config['star']:
         params:
             thread = config['thread']
         output:
-            PathToTemp + "{sample}/{sample}.bam"
+            PathToTemp + "{sample}/{sample}.temp.bam"
         conda:
             PathToEnv
         shell:
@@ -58,7 +60,7 @@ if not config['star']:
         params:
             thread = config['thread']
         output:
-            PathToTemp + "{sample}/{sample}.bam"
+            PathToTemp + "{sample}/{sample}.temp.bam"
         conda:
             PathToEnv
         shell:
@@ -101,7 +103,7 @@ else:
                 paz = PathToTemp + "{sample}/{sample}.",
                 paz2 = PathToTemp + "{sample}/{sample}.sam"
             output:
-                PathToTemp + "{sample}/{sample}.bam"
+                PathToTemp + "{sample}/{sample}.temp.bam"
             conda:
                 PathToEnv
             shell:
@@ -129,7 +131,7 @@ else:
                 paz = PathToTemp + "{sample}/{sample}.",
                 paz2 = PathToTemp + "{sample}/{sample}.sam"
             output:
-                PathToTemp + "{sample}/{sample}.bam"
+                PathToTemp + "{sample}/{sample}.temp.bam"
             conda:
                 PathToEnv
             shell:
@@ -145,6 +147,16 @@ else:
 
                 samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
                 """
+
+rule extract_mito:
+    input:
+        ancient(PathToTemp + "{sample}/{sample}.temp.bam")
+    output:
+        PathToTemp + "{sample}/{sample}.bam"
+    conda:
+        PathToEnv
+    shell:
+        "samtools view {input} chrM -bh > {output}"
 
 
 rule add_groups:
@@ -186,7 +198,7 @@ if config['consensus']:
     rule consensus:
         input:
             ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
-            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            reference = ancient(Mitochondria),
             target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
         output:
             PathToTemp + "{sample}/{sample}.fasta"
@@ -198,7 +210,7 @@ if config['consensus']:
 
     rule find_haplogroup_consensus:
         input:
-            result = ancient(PathToTemp + "{sample}/{sample}.fasta"),
+            result = ancient(Mitochondria),
             the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
@@ -216,7 +228,7 @@ else:
     rule variant_calling:
         input:
             ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
-            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            reference = ancient(Mitochondria),
             target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
         output:
             PathToTemp + "{sample}/{sample}.vcf"
@@ -231,7 +243,7 @@ else:
     rule variant_filter:
         input:
             vcf = ancient(PathToTemp + "{sample}/{sample}.vcf"),
-            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            reference = ancient(Mitochondria),
         output:
             PathToTemp + "{sample}/{sample}.filtered.vcf"
         conda:
