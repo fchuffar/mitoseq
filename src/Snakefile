@@ -1,7 +1,9 @@
 # Paths 
 PathToRaw = '../data/input/samples/'
 PathToRef = '../data/input/reference/'
-Mitochondria = '../data/input/mitochondria/mitochondria.fasta'
+mitoName = config['mitoName']
+PathToMitochondria = '../data/temp/mitochondria/'
+Mitochondria = f'../data/temp/mitochondria/{mitoName}.fasta'
 PathToGtf = '../data/input/gtf/'
 PathToRefTemp = '../data/temp/reference/'
 PathToTemp = '../data/temp/'
@@ -11,10 +13,10 @@ ReferenceName = config['referenceName']
 GtfName = config['gtfName']
 
 
-rule index:
+rule index_genome:
     input:
         reference = ancient(PathToRef + f"{ReferenceName}.fasta"),
-	mitochondria = Mitochondria
+	    mitochondria = ancient(Mitochondria)
     output:
         sample_fasta = PathToRefTemp + f"{ReferenceName}.fasta",
         bwa_index = PathToRefTemp + f"{ReferenceName}.fasta.bwt",
@@ -25,15 +27,30 @@ rule index:
     shell:
         """
         cp {input.reference} {output.sample_fasta}
-	bwa index -a bwtsw {input.mitochondria}       
-	samtools faidx {input.mitochondria}
-	gatk CreateSequenceDictionary -R {input.mitochondria}
+	    bwa index -a bwtsw {input.mitochondria}       
+	    samtools faidx {input.mitochondria}
+	    gatk CreateSequenceDictionary -R {input.mitochondria}
 
-	bwa index -a bwtsw {output.sample_fasta}
+	    bwa index -a bwtsw {output.sample_fasta}
         samtools faidx {output.sample_fasta}
         gatk CreateSequenceDictionary -R {output.sample_fasta} 
         """
 
+rule index_mito:
+    input:
+	    ancient(Mitochondria)
+    output:
+        bwa_index = PathToMitochondria + f"{mitoName}.fasta.bwt",
+        fai_index = PathToMitochondria + f"{mitoName}.fasta.fai",
+        dictionary = PathToMitochondria + f"{mitoName}.dict"
+    conda:
+        PathToEnv
+    shell:
+        """
+	    bwa index -a bwtsw {input}
+        samtools faidx {input}
+        gatk CreateSequenceDictionary -R {input} 
+        """
 
 if not config['star']:
     rule mapping_bwa_fastq:
@@ -46,7 +63,7 @@ if not config['star']:
         params:
             thread = config['thread']
         output:
-            PathToTemp + "{sample}/{sample}.temp.bam"
+            PathToTemp + "{sample}/{sample}.bam"
         conda:
             PathToEnv
         shell:
@@ -65,7 +82,7 @@ if not config['star']:
         params:
             thread = config['thread']
         output:
-            PathToTemp + "{sample}/{sample}.temp.bam"
+            PathToTemp + "{sample}/{sample}.bam"
         conda:
             PathToEnv
         shell:
@@ -108,7 +125,7 @@ else:
                 paz = PathToTemp + "{sample}/{sample}.",
                 paz2 = PathToTemp + "{sample}/{sample}.sam"
             output:
-                PathToTemp + "{sample}/{sample}.temp.bam"
+                PathToTemp + "{sample}/{sample}.bam"
             conda:
                 PathToEnv
             shell:
@@ -136,7 +153,7 @@ else:
                 paz = PathToTemp + "{sample}/{sample}.",
                 paz2 = PathToTemp + "{sample}/{sample}.sam"
             output:
-                PathToTemp + "{sample}/{sample}.temp.bam"
+                PathToTemp + "{sample}/{sample}.bam"
             conda:
                 PathToEnv
             shell:
@@ -156,9 +173,9 @@ else:
 
 rule extract_mito:
     input:
-        ancient(PathToTemp + "{sample}/{sample}.temp.bam")
+        ancient(PathToTemp + "{sample}/{sample}.bam")
     output:
-        PathToTemp + "{sample}/{sample}.bam"
+        PathToTemp + "{sample}/{sample}.mito.bam"
     conda:
         PathToEnv
     shell:
@@ -170,7 +187,7 @@ rule extract_mito:
 
 rule add_groups:
     input:
-        bam = ancient(PathToTemp + "{sample}/{sample}.bam")
+        bam = ancient(PathToTemp + "{sample}/{sample}.mito.bam")
     output:
         bam = PathToTemp + "{sample}/{sample}.groups.bam"
     params:
@@ -192,23 +209,25 @@ rule sort:
         "picard FixMateInformation -I {input} -O {output} -SO coordinate"
 
 
-rule build_index:
+rule split_cigar:
     input:
-        ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
+        bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam"),
+        reference = ancient(Mitochondria)
     output:
-        PathToTemp + "{sample}/{sample}.sorted.bai"
+        PathToTemp + "{sample}/{sample}.ready.bai",
+        bam = PathToTemp + "{sample}/{sample}.ready.bam"
     conda:
         PathToEnv
     shell:
-        "picard BuildBamIndex -I {input} -O {output}"
+        "gatk SplitNCigarReads -R {input.reference} -I {input.bam} -O {output.bam}"
 
 
 if config['consensus']:
     rule consensus:
         input:
-            ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
+            ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
             reference = ancient(Mitochondria),
-            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
         output:
             PathToTemp + "{sample}/{sample}.fasta"
         conda:
@@ -236,9 +255,10 @@ if config['consensus']:
 else:
     rule variant_calling:
         input:
-            ancient(PathToTemp + "{sample}/{sample}.sorted.bai"),
+            ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
+            ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
             reference = ancient(Mitochondria),
-            target_bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam")            
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
         output:
             PathToTemp + "{sample}/{sample}.vcf"
         params:
