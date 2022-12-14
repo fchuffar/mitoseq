@@ -7,17 +7,17 @@ _________
 
 - In order to make this pipeline work you need to have conda installed and the environnement configured:
 
-    -- To download Miniconda : https://docs.conda.io/en/latest/miniconda.html
+    - To download Miniconda : https://docs.conda.io/en/latest/miniconda.html
 
-    -- To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
+    - To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 
-    -- To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq```
+    - To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq```
 
-- Once this done all target reads should be moved into    path/to/mitoseq/data/input/samples/
+- Once this done all target reads should be moved into    {PATH_TO_MITOSEQ}/data/input/samples/
 
-    -- If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```.
+    - If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```.
 
-    -- If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
+    - If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
 
 
 ## Pipeline execution
