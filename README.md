@@ -68,13 +68,13 @@ In this case the script need
 
 - If your machine is limited in hardware you can specify hardware options:
 
-```$ python mitoseq.py --core 2 --thread 2```  or  ```$ puthon mitoseq.py -c 2 -t 2```
+```$ python mitoseq.py --core 2 --thread 2```  or  ```$ python mitoseq.py -c 2 -t 2```
 
 which will run the pipeline on 2 cores using 2 threads.
 
 - You can choose to keep all transitional files by using the following command:
 
-```$ python mitoseq.py --keep``` or ```$ puthon mitoseq.py -k```
+```$ python mitoseq.py --keep``` or ```$ python mitoseq.py -k```
 
 (Not recomended as far as every run generates ~50Gb of data for the whole genome)
 
