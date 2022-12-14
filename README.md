@@ -5,7 +5,7 @@ A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
 
 _________
 ## Installation/Configuration
-- You need to clone this project to your desired directory with ```git clone```
+- You need to clone this project to your desired directory with ```git clone HTTPS/SSH``` but you need to configure your SSH keys to perform the SSH copy
 
 - In order to make this pipeline work you need to have conda installed and the environnement configured:
 
