@@ -2,10 +2,6 @@ data/output/
 data/temp/
 src/.snakemake/
 src/__pycache__/
-
-_Samples/
+src/Log.out
 .snakemake/
-1_Input/
-2_Output/
-Output/
-.Rhistory
+

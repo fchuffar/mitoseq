@@ -241,36 +241,20 @@ if config['consensus']:
             """
 
 else:
-    if not config['star']:
-        rule variant_calling:
-            input:
-                ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
-                ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
-                reference = ancient(Mitochondria),
-                target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
-            output:
-                PathToTemp + "{sample}/{sample}.vcf"
-            params:
-                thread = config['thread']
-            conda:
-                PathToEnv
-            shell:
-                "gatk Mutect2 -L chrM --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
-    else:
-        rule variant_calling:
-            input:
-                ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
-                ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
-                reference = ancient(Mitochondria),
-                target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
-            output:
-                PathToTemp + "{sample}/{sample}.vcf"
-            params:
-                thread = config['thread']
-            conda:
-                PathToEnv
-            shell:
-                "gatk Mutect2 -L NC_012920.1 --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+    rule variant_calling:
+        input:
+            ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
+            ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
+            reference = ancient(Mitochondria),
+            target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
+        output:
+            PathToTemp + "{sample}/{sample}.vcf"
+        params:
+            thread = config['thread']
+        conda:
+            PathToEnv
+        shell:
+            "gatk Mutect2 -L NC_012920.1 --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
 
     rule variant_filter:
         input:
@@ -281,7 +265,7 @@ else:
         conda:
             PathToEnv
         shell:
-            "gatk FilterMutectCalls --mitochondria-mode -R {input.reference} -V {input.vcf} -O {output}"
+            "gatk FilterMutectCalls --mitochondria-mode --min-allele-fraction 0.3 -R {input.reference} -V {input.vcf} -O {output}"
 
 
     rule find_haplogroup_vcf:
