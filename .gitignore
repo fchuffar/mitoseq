@@ -1,7 +1,7 @@
 data/output/
 data/temp/
 src/.snakemake/
-scr/__pycache__/
+src/__pycache__/
 
 _Samples/
 .snakemake/
