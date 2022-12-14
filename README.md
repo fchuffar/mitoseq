@@ -31,7 +31,6 @@ What is done to each sample:
 graph TD;
 Sequencing-->Sample_R1.fastq;
 Sequencing-->Sample_R2.fastq;
-NCBI-->reference.fasta;
 Sample_R1.fastq-->BAM;
 Output.bam-->BAM;
 Sample_R2.fastq-->BAM;
