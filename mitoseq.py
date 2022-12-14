@@ -1,37 +1,75 @@
 import os
 import argparse
-from src.utils import haplogroup_count, fuse_haplogroups, haplogroupe_accession
+from src.utils import (
+    haplogroup_count,
+    fuse_haplogroups,
+    haplogroupe_accession,
+    prepareRef,
+    prepareMito,
+    prepareGtf,
+    prepareSamples,
+)
 
-PathToSamples = "data/input/samples/"
 PathToRef = "data/input/reference/"
 PathToMito = "data/input/mitochondria/"
 PathToGtf = "data/input/gtf/"
-PathToTempSamples = "data/temp/samples"
+PathToSamples = "data/input/samples/"
 PathToTemp = "data/temp/"
 PathToOutput = "../data/output/"
 
 parser = argparse.ArgumentParser(description="Every argument is optional")
+
 parser.add_argument(
     "-k",
     "--keep",
     action="store_true",
-    help="Choose if you keep the Temporary files (default=False)",
+    help="Choose if you're wishing to keep the Temporary files (default=False)",
     default=False,
 )
 parser.add_argument(
     "-c",
     "--core",
     type=int,
-    help="Choose the number of core to be used for snakemake (default=4)",
+    help="Give the number of core to be used for snakemake (default=4)",
     default=4,
 )
 parser.add_argument(
     "-t",
     "--thread",
     type=int,
-    help="Choose the number of thread to be used for commands inside of snakemake (default=4)",
+    help="Give the number of thread to be used for commands inside of snakemake (default=4)",
     default=4,
 )
+parser.add_argument(
+    "-r",
+    "--genref",
+    type=str,
+    help="Enter the ftp download link for the complete genome (default is Homo Sapiens GRCh38.p14)",
+    default="https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz",
+)
+parser.add_argument(
+    "-m",
+    "--mitoref",
+    type=str,
+    help='Enter the reference accession number for the mitochondria (default is Homo Sapiens GRCh38.p14 mitochondria : "NC_012920.1")',
+    default="NC_012920.1",
+)
+parser.add_argument(
+    "-g",
+    "--gtfref",
+    type=str,
+    help="Enter the ftp download link for the Gene Transfert Format (default is Homo Sapiens GRCh38.p14 GTF)",
+    default="https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz",
+)
+parser.add_argument(
+    "-n",
+    "--chrMName",
+    type=str,
+    help="To keep compatibilities for extracting the Mitochondrial chromosome, enter the name of the chrM contig of the reference sequence",
+    default="NC_012920.1",
+)
+
+"""
 parser.add_argument(
     "-b",
     "--bank",
@@ -53,13 +91,7 @@ parser.add_argument(
     help='Enter the tree file which link haplogroup to accession number (default="src/web_data/phylotree.txt")',
     default="src/web_data/phylotree.txt",
 )
-parser.add_argument(
-    "-r",
-    "--reference",
-    type=str,
-    help='Enter the reference accession number, the default one point to the mitochondria reference (default="JQ705953")',
-    default="NC_012920.1",
-)
+"""
 parser.add_argument(
     "-s",
     "--consensus",
@@ -77,128 +109,42 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-os.system(f"src/setup.sh {args.reference} {args.star}")
+os.system(
+    f"""src/setup.sh {args.genref} \
+          {args.genref[args.genref.rfind('/') + 1:]} \
+          {args.mitoref} \
+          {args.gtfref} \
+          {args.gtfref[args.gtfref.rfind('/') + 1:]} \
+          {args.star}"""
+)
 
-if len(os.listdir(PathToRef)) > 1:
-    raise Exception(
-        f"Too many references files in {PathToRef} directory, there should only be one"
-    )
+referenceName = prepareRef(PathToRef, PathToTemp)
 
+mitochondriaName = prepareMito(PathToMito, PathToTemp, args.star, args.chrMName)
 
-if os.listdir(PathToRef)[0][-4:] == ".fna":
-    os.rename(
-        PathToRef + os.listdir(PathToRef)[0],
-        PathToRef + os.listdir(PathToRef)[0].replace(".fna", ".fasta"),
-    )
+gtfName = prepareGtf(PathToGtf, PathToRef, PathToTemp, args.star)
 
-referenceName = os.listdir(PathToRef)[0].replace(".fasta", "")
-os.system(f"""
-          mkdir -p {PathToTemp}reference
-          cp -u {PathToRef}{referenceName}.fasta {PathToTemp}reference
-        """)
-
-
-if len(os.listdir(PathToMito)) > 1:
-    raise Exception(
-        f"Too many references files in {PathToMito} directory, there should only be one"
-    )
-
-if os.listdir(PathToMito)[0][-4:] == ".fna":
-    os.rename(
-        PathToMito + os.listdir(PathToMito)[0],
-        PathToMito + os.listdir(PathToMito)[0].replace(".fna", ".fasta"),
-    )
-
-data = None
-with open(PathToMito + os.listdir(PathToMito)[0], "r+") as file:
-    data = file.read()
-    if not args.star:
-        if data[1:5] != "chrM":
-            data = data.replace(data[1 : data.find(" ")], "chrM")
-            file.write(data)
-        else:
-            data = None
-    else:
-        data = data.replace(data[1 : data.find(" ")], "NC_012920.1")
-        file.write(data)
-
-if data != None:
-    with open(PathToMito + os.listdir(PathToMito)[0], "w+") as file:
-        file.write(data)
-
-mitochondriaName = os.listdir(PathToMito)[0].replace(".fasta", "")
-os.system(f"""
-          mkdir -p {PathToTemp}mitochondria
-          cp -u {PathToMito}{mitochondriaName}.fasta {PathToTemp}mitochondria
-        """)
-
-gtfName = None
-if args.star == True:
-    if len(os.listdir(PathToGtf)) > 1:
-        raise Exception(
-            f"Too many gtf files in {PathToRef} directory, there should only be one"
-        )
-    if len(os.listdir(PathToGtf)) == 0:
-        raise Exception(
-            f"No gtf files found in {PathToRef} directory, you have to add it to use star mapping"
-        )
-    gtfName = os.listdir(PathToGtf)[0].replace(".gtf", "")
-    os.system(f"mkdir -p {PathToTemp}/genomeDir")
-
-
-## Obtaining a sample list from the files existing in the samples folder
-if len(os.listdir(PathToSamples)) == 0:
-    raise Exception(f"No file found in {PathToSamples} directory")
-
-files = []
-for file in os.listdir(PathToSamples):
-    os.rename(
-        PathToSamples + file,
-        PathToSamples + file.replace(".fq", ".fastq").replace(".fq.gz", ".fastq.gz"),
-    )
-
-sample_list = os.listdir(PathToSamples)
-ignore_list = []
-for file in sample_list:
-    print(ignore_list)
-    if file[-4:] == ".bam" or file[-6:] == ".bam.gz":
-        name = file[: file.find(".")]
-        os.system(
-            f"""
-            mkdir -p {PathToTemp}{name}
-            cp -u {PathToSamples}{file} {PathToTemp}{name}/{name}.bam
-        """)
-        files.append(f"{PathToOutput}{name}.txt")
-
-    elif file[-6:] == ".fastq" or file[-9:] == ".fastq.gz" and file not in ignore_list:
-        if file.find("_R1") != -1:
-            if file.replace("_R1", "_R2") in sample_list:
-                name = file[: file.find("_R1")]
-                ignore_list.append(file.replace("_R1", "_R2"))
-                os.system(f"mkdir -p {PathToTemp}{name}")
-                files.append(f"{PathToOutput}{name}.txt")
-        elif file.find("_R2") != -1:
-            if file.replace("_R2", "_R1") in sample_list:
-                name = file[: file.find("_R2")]
-                ignore_list.append(file.replace("_R2", "_R1"))
-                os.system(f"mkdir -p {PathToTemp}{name}")
-                files.append(f"{PathToOutput}{name}.txt")
-        else:
-            raise Exception(
-                f"Invalid .fastq file in {PathToSamples} directory, this pipeline only work with paired-end and bam"
-            )
-    elif file not in ignore_list:
-        raise Exception(
-            f"There seem to be an unwanted file in {PathToSamples} directory"
-        )
-
-files = set(files)
+files = prepareSamples(PathToSamples, PathToTemp, PathToOutput)
 
 
 # Pipeline execution
-prompt = f"cd src ; snakemake --rerun-incomplete --config mitoName={mitochondriaName} star={args.star} keep={args.keep} thread={args.thread} consensus={args.consensus} referenceName={referenceName} gtfName={gtfName} -c {args.core} {' '.join(files)}"
+prompt = f"""cd src ; \
+    snakemake --rerun-incomplete \
+    -n \
+    -c {args.core} \
+    {' '.join(files)} \
+    --config mitoName={mitochondriaName} \
+    mito_Name={args.chrMName} \
+    star={args.star} \
+    keep={args.keep} \
+    thread={args.thread} \
+    consensus={args.consensus} \
+    referenceName={referenceName} \
+    gtfName={gtfName}"""
+
 os.system(prompt)
 
+# At the end of the pipeline, delete temp file if you don't want to keep it
 if not args.keep:
     os.system("rm -rf data/temp/ 2> /dev/null")
 

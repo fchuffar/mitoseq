@@ -15,18 +15,20 @@ cd data/input/
 
 # if there is no human genome reference, download and extract it.
 if test 0 -eq $(ls reference/*.fna 2> /dev/null | wc -l ) && test 0 -eq $(ls reference/*.fasta 2> /dev/null | wc -l ); then
-    wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.fna.gz -P reference/
-    gunzip reference/GCF_000001405.40_GRCh38.p14_genomic.fna.gz
+    echo "Downloading genome of reference"
+    wget "$1" -P reference/ 2> /dev/null
+    gunzip reference/"$2"
 fi
 
 # if there is no michondria reference, download it.
 if test 0 -eq $(ls mitochondria/*.fna 2> /dev/null | wc -l) && test 0 -eq $(ls mitochondria/*.fasta 2> /dev/null | wc -l); then
-    efetch -db nuccore -id "$1" -format fasta > mitochondria/mitochondria.fasta
+    echo "Downloading mitochondria of reference"
+    efetch -db nuccore -id "$3" -format fasta > mitochondria/mitochondria.fasta
 fi
 
-
 # if you use star mapping and there is no gene reference, download it.
-if [ "$2" = True ] && test 0 -eq $(ls gtf/*.gtf 2> /dev/null | wc -l ); then
-    wget https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz -P gtf/
-    gunzip gtf/GCF_000001405.40_GRCh38.p14_genomic.gtf.gz
+if [ "$6" = True ] && test 0 -eq $(ls gtf/*.gtf 2> /dev/null | wc -l ); then
+    echo "Downloading Gene Transfert Format of reference"
+    wget "$4" -P gtf/ 2> /dev/null
+    gunzip gtf/"$5"
 fi
