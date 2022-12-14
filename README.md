@@ -35,32 +35,6 @@ _________
 
 - This should take time based on the number of samples
 
-## Examples
-### For complete information you can get the arguments manual by:
-```$python mythoseq.py -h```
-
-Or feel free to check the documentation file in the root folder of the project.
-
-- By default, the fastq data alignement will be performed by BWA, if you wish this step to be performed by STAR please specify it:
-
-```$ puthon mitoseq.py --star``` or ```$ python mitoseq.py -a```
-
-In this case the script need
-
-- If your machine is limited in hardware you can specify hardware options:
-
-```$ puthon mitoseq.py --core 2 --thread 2```  or  ```$ puthon mitoseq.py -c 2 -t 2```
-
-which will run the pipeline on 2 cores using 2 threads.
-
-- You can choose to keep all transitional files by using the following command:
-
-```$ puthon mitoseq.py --keep``` or ```$ puthon mitoseq.py -k```
-
-(Not recomended as far as every run generates ~50Gb of data for the whole genome)
-
-
-
 What is done to each sample:
 ```mermaid
 graph TD;
@@ -79,3 +53,29 @@ Variant_calling-->VCF;
 VCF-->Haplogrep
 
 ```
+
+## Examples
+### For complete information you can get the arguments manual by:
+```$ python mythoseq.py -h```
+
+Or feel free to check the documentation file in the root folder of the project.
+
+- By default, the fastq data alignement will be performed by BWA, if you wish this step to be performed by STAR please specify it:
+
+```$ python mitoseq.py --star``` or ```$ python mitoseq.py -a```
+
+In this case the script need
+
+- If your machine is limited in hardware you can specify hardware options:
+
+```$ python mitoseq.py --core 2 --thread 2```  or  ```$ puthon mitoseq.py -c 2 -t 2```
+
+which will run the pipeline on 2 cores using 2 threads.
+
+- You can choose to keep all transitional files by using the following command:
+
+```$ python mitoseq.py --keep``` or ```$ puthon mitoseq.py -k```
+
+(Not recomended as far as every run generates ~50Gb of data for the whole genome)
+
+
