@@ -92,6 +92,10 @@ if os.listdir(PathToRef)[0][-4:] == ".fna":
     )
 
 referenceName = os.listdir(PathToRef)[0].replace(".fasta", "")
+os.system(f"""
+          mkdir -p {PathToTemp}reference
+          cp -u {PathToRef}{referenceName}.fasta {PathToTemp}reference
+        """)
 
 
 if len(os.listdir(PathToMito)) > 1:
@@ -108,11 +112,15 @@ if os.listdir(PathToMito)[0][-4:] == ".fna":
 data = None
 with open(PathToMito + os.listdir(PathToMito)[0], "r+") as file:
     data = file.read()
-    if data[1:5] != "chrM":
-        data = data.replace(data[1 : data.find(" ")], "chrM")
-        file.write(data)
+    if not args.star:
+        if data[1:5] != "chrM":
+            data = data.replace(data[1 : data.find(" ")], "chrM")
+            file.write(data)
+        else:
+            data = None
     else:
-        data = None
+        data = data.replace(data[1 : data.find(" ")], "NC_012920.1")
+        file.write(data)
 
 if data != None:
     with open(PathToMito + os.listdir(PathToMito)[0], "w+") as file:
@@ -152,27 +160,27 @@ for file in os.listdir(PathToSamples):
 sample_list = os.listdir(PathToSamples)
 ignore_list = []
 for file in sample_list:
+    print(ignore_list)
     if file[-4:] == ".bam" or file[-6:] == ".bam.gz":
         name = file[: file.find(".")]
         os.system(
             f"""
             mkdir -p {PathToTemp}{name}
             cp -u {PathToSamples}{file} {PathToTemp}{name}/{name}.bam
-        """
-        )
+        """)
         files.append(f"{PathToOutput}{name}.txt")
 
     elif file[-6:] == ".fastq" or file[-9:] == ".fastq.gz" and file not in ignore_list:
-        if file.find("_R1"):
+        if file.find("_R1") != -1:
             if file.replace("_R1", "_R2") in sample_list:
                 name = file[: file.find("_R1")]
-                ignore_list.append(file.replace("R1", "R2"))
+                ignore_list.append(file.replace("_R1", "_R2"))
                 os.system(f"mkdir -p {PathToTemp}{name}")
                 files.append(f"{PathToOutput}{name}.txt")
-        elif file.find("_R2"):
+        elif file.find("_R2") != -1:
             if file.replace("_R2", "_R1") in sample_list:
                 name = file[: file.find("_R2")]
-                ignore_list.append(file.replace("R2", "R1"))
+                ignore_list.append(file.replace("_R2", "_R1"))
                 os.system(f"mkdir -p {PathToTemp}{name}")
                 files.append(f"{PathToOutput}{name}.txt")
         else:
@@ -185,7 +193,6 @@ for file in sample_list:
         )
 
 files = set(files)
-
 
 
 # Pipeline execution
