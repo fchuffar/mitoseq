@@ -15,14 +15,33 @@ _________
 
     3) To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq```
 
-- Once this done all target reads should be moved into    path/to/mitoseq/1_Input/2_samples/
+- Once this done all target reads should be moved into    path/to/mitoseq/data/input/samples/
 
-    1) If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```
+    1) If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```.
 
-- Execute the mitoseq.py:
+    2) If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
+
+    3) If both extention types are used for the same analyze:
+        - For the same sample, the .bam will be used as it takes less time;
+        - For different samples, make sure you used the --two-ext (-te) argument while executing the ```mitoseq.py``` (see below).
+    
+    OR
+
+    3) In current version there is no support for inputs in both FASTQ and BAM at the same time, make sure that only one type of input is used per run. 
+
+## Pipeline execution
+- Once the previous steps are done you can perform the run by running the following command
 ```$ python mitoseq.py```
 
 - This should take time based on the number of samples
+
+## Examples
+If your machine is limited in hardware you can specify hardware options:
+```$ puthon mitoseq.py --core 2 --thread 2```  or  ```$ puthon mitoseq.py -c 2 -t 2```
+which will run the pipeline on 2 cores using 2 threads.
+
+
+
 
 
 What is done to each sample:
