@@ -1,5 +1,3 @@
-[![forthebadge](https://forthebadge.com/images/badges/powered-by-black-magic.svg)](https://forthebadge.com)
-
 # MITOSEQ
 A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
 
@@ -21,13 +19,6 @@ _________
 
     2) If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
 
-    3) If both extention types are used for the same analyze:
-        - For the same sample, the .bam will be used as it takes less time;
-        - For different samples, make sure you used the --two-ext (-te) argument while executing the ```mitoseq.py``` (see below).
-    
-    OR
-
-    3) In current version there is no support for inputs in both FASTQ and BAM at the same time, make sure that only one type of input is used per run. 
 
 ## Pipeline execution
 - Once the previous steps are done you can perform the run by running the following command
@@ -44,8 +35,8 @@ NCBI-->reference.fasta;
 Sample_R1.fastq-->BAM;
 Output.bam-->BAM;
 Sample_R2.fastq-->BAM;
-reference.fasta-->BAM;
-reference.fasta-->Index;
+Genome references-->BAM;
+Genome references-->Index;
 BAM-->Filtered.bam;
 Filtered.bam-->Variant_calling;
 Index-->Variant_calling;
@@ -78,4 +69,5 @@ which will run the pipeline on 2 cores using 2 threads.
 
 (Not recomended as far as every run generates ~50Gb of data for the whole genome)
 
-
+## Results
+- By the end you will obtain data/output/haplogroups.txt in which all samples' haplogroups are found along with the Haplogrep's quality score for each sample.
