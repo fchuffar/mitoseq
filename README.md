@@ -19,6 +19,8 @@ _________
 
     - If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
 
+- Folders reference/, mitochondria/ and gtf/ (Cf Example) in data/input/ exist in order to let you use the reference/annotation of your choice, if you don't want to use the default ones that will be downloaded automatically if the folders are empty. If you decide to use your own reference/annotation, make sure that none of these folders contain more than 1 file, overwise the pipeline will not run. 
+
 
 ## Pipeline execution
 - Once the previous steps are done you can perform the run by executing the following command
@@ -52,9 +54,13 @@ Or feel free to check the documentation file in the root folder of the project.
 
 - By default, the fastq data alignement will be performed by BWA, if you wish this step to be performed by STAR please specify it:
 
-```$ python mitoseq.py --star``` or ```$ python mitoseq.py -a```
+```$ python mitoseq.py --star```  or  ```$ python mitoseq.py -a```
 
-In this case the script need
+- You can decide to use the consensus sequence after the mapping:
+
+```$ python mitoseq.py --consensus```  or  ```$ python mitoseq.py -s```
+
+This should run faster, but will lose variation data, as the most common base would be chosen and not all of them.
 
 - If your machine is limited in hardware you can specify hardware options:
 
@@ -64,7 +70,7 @@ which will run the pipeline on 2 cores using 2 threads.
 
 - You can choose to keep all transitional files by using the following command:
 
-```$ python mitoseq.py --keep``` or ```$ python mitoseq.py -k```
+```$ python mitoseq.py --keep```  or  ```$ python mitoseq.py -k```
 
 (Not recomended as far as every run generates ~50Gb of data for the whole genome)
 
