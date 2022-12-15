@@ -1,24 +1,27 @@
 # Paths 
 PathToRaw = '../data/input/samples/'
-PathToRef = '../data/input/reference/'
-mitoName = config['mitoName']
-PathToMitochondria = '../data/temp/mitochondria/'
-Mitochondria = f'../data/temp/mitochondria/{mitoName}.fasta'
-PathToGtf = '../data/input/gtf/'
+
 PathToRefTemp = '../data/temp/reference/'
+ReferenceName = config['referenceName']
+
+PathToMitochondria = '../data/temp/mitochondria/'
+mitoName = config['mitoName']
+
+PathToGtf = '../data/input/gtf/'
+GtfName = config['gtfName']
+
 PathToTemp = '../data/temp/'
 PathToOutput = '../data/output/'
 PathToEnv = 'environment/env.yml'
-ReferenceName = config['referenceName']
-GtfName = config['gtfName']
+
+StarMode = config['star']
+ConsensusMode = config['consensus']
 
 
 rule index_genome:
     input:
-        reference = ancient(PathToRef + f"{ReferenceName}.fasta"),
-	    mitochondria = ancient(Mitochondria)
+        ancient(PathToRefTemp + f"{ReferenceName}.fasta")
     output:
-        sample_fasta = PathToRefTemp + f"{ReferenceName}.fasta",
         bwa_index = PathToRefTemp + f"{ReferenceName}.fasta.bwt",
         fai_index = PathToRefTemp + f"{ReferenceName}.fasta.fai",
         dictionary = PathToRefTemp + f"{ReferenceName}.dict"
@@ -26,19 +29,17 @@ rule index_genome:
         PathToEnv
     shell:
         """
-        cp {input.reference} {output.sample_fasta}
-	    bwa index -a bwtsw {input.mitochondria}       
-	    samtools faidx {input.mitochondria}
-	    gatk CreateSequenceDictionary -R {input.mitochondria}
+        bwa index -a bwtsw {input}
 
-	    bwa index -a bwtsw {output.sample_fasta}
-        samtools faidx {output.sample_fasta}
-        gatk CreateSequenceDictionary -R {output.sample_fasta} 
+        samtools faidx {input}
+
+        gatk CreateSequenceDictionary -R {input} 
         """
 
-rule index_mito:
+
+rule index_mitochondria:
     input:
-	    ancient(Mitochondria)
+        ancient(PathToMitochondria + f"{mitoName}.fasta")
     output:
         bwa_index = PathToMitochondria + f"{mitoName}.fasta.bwt",
         fai_index = PathToMitochondria + f"{mitoName}.fasta.fai",
@@ -47,17 +48,97 @@ rule index_mito:
         PathToEnv
     shell:
         """
-	    bwa index -a bwtsw {input}
+        bwa index -a bwtsw {input}
+
         samtools faidx {input}
+        
         gatk CreateSequenceDictionary -R {input} 
         """
 
-if not config['star']:
+
+if StarMode:
+    rule index_star:
+        input:
+            reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
+            gtf = ancient(PathToGtf + f"{GtfName}.gtf"),
+            genomeDir = ancient(PathToTemp + "genomeDir")
+        params:
+            thread = config['thread']
+        output:
+            PathToTemp + "genomeDir/SA"
+        conda:
+            PathToEnv
+        shell:
+            """
+            STAR --runThreadN {params.thread} \
+            --runMode genomeGenerate \
+            --genomeDir {input.genomeDir} \
+            --genomeFastaFiles {input.reference} \
+            --sjdbGTFfile {input.gtf} \
+            --sjdbOverhang 99 \
+            
+            mv Log.out {input.genomeDir}
+            """
+    
+
+    rule mapping_star_fastq:
+        input:
+            ancient(PathToTemp + "genomeDir/SA"),
+            genomeDir = ancient(PathToTemp + "genomeDir"),
+            R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
+            R2 = ancient(PathToRaw + "{sample}_R2.fastq")
+        params:
+            thread = config['thread'],
+            resultprefix = PathToTemp + "{sample}/{sample}.",
+        output:
+            PathToTemp + "{sample}/{sample}.bam"
+        conda:
+            PathToEnv
+        shell:
+            """
+            STAR --runThreadN {params.thread} \
+            --genomeDir {input.genomeDir} \
+            --readFilesIn {input.R1} {input.R2} \
+            --outSAMmapqUnique 255 \
+            --outFileNamePrefix {params.resultprefix} \
+            --twopassMode Basic \
+            --outSAMtype BAM SortedByCoordinate
+
+            mv {params.resultprefix}Aligned.sortedByCoord.out.bam {output}
+            """
+
+
+    rule mapping_star_gz:
+        input:
+            ancient(PathToTemp + "genomeDir/SA"),
+            genomeDir = ancient(PathToTemp + "genomeDir"),
+            R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
+            R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
+        params:
+            thread = config['thread'],
+            resultprefix = PathToTemp + "{sample}/{sample}.",
+        output:
+            PathToTemp + "{sample}/{sample}.bam"
+        conda:
+            PathToEnv
+        shell:
+            """
+            STAR --runThreadN {params.thread} \
+            --genomeDir {input.genomeDir} \
+            --readFilesIn {input.R1} {input.R2} \
+            --outFileNamePrefix {params.resultprefix} \
+            --outSAMmapqUnique 255 \
+            --readFilesCommand gunzip -c \
+            --twopassMode Basic \
+            --outSAMtype BAM SortedByCoordinate
+
+            mv {params.resultprefix}Aligned.sortedByCoord.out.bam {output}
+            """
+else:
     rule mapping_bwa_fastq:
         input:
-            paz = ancient(PathToTemp + "{sample}/"),
+            ancient(PathToRefTemp + f"{ReferenceName}.fasta.fai"),
             reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
-            
             R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
             R2 = ancient(PathToRaw + "{sample}_R2.fastq")
         params:
@@ -74,9 +155,8 @@ if not config['star']:
 
     rule mapping_bwa_gz:
         input:
-            paz = ancient(PathToTemp + "{sample}/"),
+            ancient(PathToRefTemp + f"{ReferenceName}.fasta.fai"),
             reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
-            
             R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
             R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
         params:
@@ -90,99 +170,22 @@ if not config['star']:
             bwa mem -t {params.thread} {input.reference} {input.R1} {input.R2} | samtools view -@ 4 -bh | samtools sort -@ 4 -o {output}
             """
 
-else:
-    rule index_star:
-            input:
-                reference = ancient(PathToRefTemp + f"{ReferenceName}.fasta"),
-                gtf = ancient(PathToGtf + f"{GtfName}.gtf"),
-                genomeDir = ancient(PathToTemp + "genomeDir")
-            params:
-                thread = config['thread']
-            output:
-                PathToTemp + "genomeDir/SA"
-            conda:
-                PathToEnv
-            shell:
-                """
-                STAR --runThreadN {params.thread} \
-                --runMode genomeGenerate \
-                --genomeDir {input.genomeDir} \
-                --genomeFastaFiles {input.reference} \
-                --sjdbGTFfile {input.gtf} \
-                --sjdbOverhang 99 \
-                --genomeSAindexNbases 6
-                """
-    
-
-    rule mapping_star_fastq:
-            input:
-                ahi = ancient(PathToTemp + "genomeDir/SA"),
-                genomeDir = ancient(PathToTemp + "genomeDir"),
-                R1 = ancient(PathToRaw + "{sample}_R1.fastq"),
-                R2 = ancient(PathToRaw + "{sample}_R2.fastq")
-            params:
-                thread = config['thread'],
-                paz = PathToTemp + "{sample}/{sample}.",
-                paz2 = PathToTemp + "{sample}/{sample}.sam"
-            output:
-                PathToTemp + "{sample}/{sample}.bam"
-            conda:
-                PathToEnv
-            shell:
-                """
-                STAR --runThreadN {params.thread} \
-                --genomeDir {input.genomeDir} \
-                --readFilesIn {input.R1} {input.R2} \
-                --outFileNamePrefix {params.paz} \
-                --outSAMmapqUnique 255
-                
-                mv {params.paz}Aligned.out.sam {params.paz2}
-
-                samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
-                """
-
-
-    rule mapping_star_gz:
-            input:
-                ahi = ancient(PathToTemp + "genomeDir/SA"),
-                genomeDir = ancient(PathToTemp + "genomeDir"),
-                R1 = ancient(PathToRaw + "{sample}_R1.fastq.gz"),
-                R2 = ancient(PathToRaw + "{sample}_R2.fastq.gz")
-            params:
-                thread = config['thread'],
-                paz = PathToTemp + "{sample}/{sample}.",
-                paz2 = PathToTemp + "{sample}/{sample}.sam"
-            output:
-                PathToTemp + "{sample}/{sample}.bam"
-            conda:
-                PathToEnv
-            shell:
-                """
-                STAR --runThreadN {params.thread} \
-                --genomeDir {input.genomeDir} \
-                --readFilesIn {input.R1} {input.R2} \
-                --outFileNamePrefix {params.paz} \
-                --outSAMmapqUnique 255 \
-                --readFilesCommand gunzip -c
-                
-                mv {params.paz}Aligned.out.sam {params.paz2}
-
-                samtools view {params.paz2} -@ 4 -bh | samtools sort -@ 4 -o {output}
-                """
-
 
 rule extract_mito:
     input:
         ancient(PathToTemp + "{sample}/{sample}.bam")
     output:
         PathToTemp + "{sample}/{sample}.mito.bam"
+    params:
+        mito = config['mito_Name']
     conda:
         PathToEnv
     shell:
         """
-	samtools index {input}
-	samtools view {input} chrM -bh > {output}
-	"""
+        samtools index {input}
+
+        samtools view {input} {params.mito} -bh > {output}
+        """
 
 
 rule add_groups:
@@ -211,34 +214,32 @@ rule sort:
 
 rule split_cigar:
     input:
+        ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
         bam = ancient(PathToTemp + "{sample}/{sample}.sorted.bam"),
-        reference = ancient(Mitochondria)
+        reference = ancient(PathToMitochondria + f"{mitoName}.fasta")
     output:
-        PathToTemp + "{sample}/{sample}.ready.bai",
-        bam = PathToTemp + "{sample}/{sample}.ready.bam"
+        bam = PathToTemp + "{sample}/{sample}.split.bam"
     conda:
         PathToEnv
     shell:
         "gatk SplitNCigarReads -R {input.reference} -I {input.bam} -O {output.bam}"
 
 
-if config['consensus']:
+if ConsensusMode:
     rule consensus:
         input:
-            ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
-            reference = ancient(Mitochondria),
-            target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
+            bam = ancient(PathToTemp + "{sample}/{sample}.split.bam")
         output:
             PathToTemp + "{sample}/{sample}.fasta"
         conda:
             PathToEnv
         shell:
-            "samtools consensus -f fasta -a {input.target_bam} -o {output}"
+            "samtools consensus -f fasta -a {input.bam} -o {output}"
     
 
     rule find_haplogroup_consensus:
         input:
-            result = ancient(PathToTemp + "{sample}/{sample}.fasta"),
+            consensus = ancient(PathToTemp + "{sample}/{sample}.fasta"),
             the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
@@ -248,37 +249,50 @@ if config['consensus']:
             PathToEnv
         shell:
             """
-            haplogrep classify --in {input.result} --out {output} --format fasta
+            haplogrep classify --in {input.consensus} --out {output} --format fasta
+
             if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """
 
 else:
     rule variant_calling:
         input:
-            ancient(PathToTemp + "{sample}/{sample}.ready.bai"),
-            ancient(PathToMitochondria + f"{mitoName}.fasta.fai"),
-            reference = ancient(Mitochondria),
-            target_bam = ancient(PathToTemp + "{sample}/{sample}.ready.bam")
+            reference = ancient(PathToMitochondria + f"{mitoName}.fasta"),
+            bam = ancient(PathToTemp + "{sample}/{sample}.split.bam")
         output:
             PathToTemp + "{sample}/{sample}.vcf"
         params:
-            thread = config['thread']
+            thread = config['thread'],
+            mito = config['mito_Name']
         conda:
             PathToEnv
         shell:
-            "gatk Mutect2 -L chrM --mitochondria-mode --native-pair-hmm-threads {params.thread} -R {input.reference} -I {input.target_bam} -O {output}"
+            """
+            gatk Mutect2 --mitochondria-mode \
+            -L {params.mito} \
+            --native-pair-hmm-threads {params.thread} \
+            -R {input.reference} \
+            -I {input.bam} \
+            -O {output}
+            """
 
 
     rule variant_filter:
         input:
             vcf = ancient(PathToTemp + "{sample}/{sample}.vcf"),
-            reference = ancient(Mitochondria),
+            reference = ancient(PathToMitochondria + f"{mitoName}.fasta"),
         output:
             PathToTemp + "{sample}/{sample}.filtered.vcf"
         conda:
             PathToEnv
         shell:
-            "gatk FilterMutectCalls --mitochondria-mode -R {input.reference} -V {input.vcf} -O {output}"
+            """
+            gatk FilterMutectCalls --mitochondria-mode \
+            --min-allele-fraction 0.2 \
+            -R {input.reference} \
+            -V {input.vcf} \
+            -O {output}
+            """
 
 
     rule find_haplogroup_vcf:
@@ -294,5 +308,6 @@ else:
         shell:
             """
             haplogrep classify --in {input.vcf} --out {output} --format vcf
+
             if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """

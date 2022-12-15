@@ -1,77 +1,43 @@
-
-
 # MITOSEQ
 A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
 
 _________
 ## Installation/Configuration
-- You need to clone this project to your desired directory with ```git clone```
+- You need to clone this project to your desired directory with ```git clone HTTPS/SSH``` but you need to configure your SSH keys to perform the SSH copy
 
 - In order to make this pipeline work you need to have conda installed and the environnement configured:
 
-    1) To download Miniconda : https://docs.conda.io/en/latest/miniconda.html
+    - To download Miniconda : https://docs.conda.io/en/latest/miniconda.html
 
-    2) To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
+    - To install Miniconda : https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 
-    3) To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq```
+    - To setup the environnement: ```conda env update --file src/environment/env.yml --name MitoSeq ; conda activate MitoSeq```
 
-- Once this done all target reads should be moved into    path/to/mitoseq/data/input/samples/
+- Once this done all target reads should be moved into    {PATH_TO_MITOSEQ}/data/input/samples/
 
-    1) If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```.
+    - If you use FASTQ as output make sure that paired RNASeq output sequences are called according to ```{sample_name/info}_R(1|2).fastq```.
 
-    2) If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
+    - If you use BAM as output the prefix of each file will be used as a sample ID, feel free to rename it as you wish.
 
-    3) If both extention types are used for the same analyze:
-        - For the same sample, the .bam will be used as it takes less time;
-        - For different samples, make sure you used the --two-ext (-te) argument while executing the ```mitoseq.py``` (see below).
-    
-    OR
+- Folders reference/, mitochondria/ and gtf/ (Cf Example) in data/input/ exist in order to let you use the reference/annotation of your choice, if you don't want to use the default ones that will be downloaded automatically if the folders are empty. If you decide to use your own reference/annotation, make sure that none of these folders contain more than 1 file, overwise the pipeline will not run. 
 
-    3) In current version there is no support for inputs in both FASTQ and BAM at the same time, make sure that only one type of input is used per run. 
 
 ## Pipeline execution
-- Once the previous steps are done you can perform the run by running the following command
+- Once the previous steps are done you can perform the run by executing the following command
 ```$ python mitoseq.py```
 
 - This should take time based on the number of samples
-
-## Examples
-### For complete information you can get the arguments manual by:
-```$python mythoseq.py -h```
-
-Or feel free to check the documentation file in the root folder of the project.
-
-- By default, the fastq data alignement will be performed by BWA, if you wish this step to be performed by STAR please specify it:
-
-```$ puthon mitoseq.py --star``` or ```$ python mitoseq.py -a```
-
-In this case the script need
-
-- If your machine is limited in hardware you can specify hardware options:
-
-```$ puthon mitoseq.py --core 2 --thread 2```  or  ```$ puthon mitoseq.py -c 2 -t 2```
-
-which will run the pipeline on 2 cores using 2 threads.
-
-- You can choose to keep all transitional files by using the following command:
-
-```$ puthon mitoseq.py --keep``` or ```$ puthon mitoseq.py -k```
-
-(Not recomended as far as every run generates ~50Gb of data for the whole genome)
-
-
 
 What is done to each sample:
 ```mermaid
 graph TD;
 Sequencing-->Sample_R1.fastq;
 Sequencing-->Sample_R2.fastq;
-NCBI-->reference.fasta;
 Sample_R1.fastq-->BAM;
 Output.bam-->BAM;
 Sample_R2.fastq-->BAM;
-reference.fasta-->BAM;
-reference.fasta-->Index;
+Genome_references-->BAM;
+Genome_references-->Index;
 BAM-->Filtered.bam;
 Filtered.bam-->Variant_calling;
 Index-->Variant_calling;
@@ -79,3 +45,34 @@ Variant_calling-->VCF;
 VCF-->Haplogrep
 
 ```
+
+## Examples
+### For complete information you can get the arguments manual by:
+```$ python mythoseq.py -h```
+
+Or feel free to check the documentation file in the root folder of the project.
+
+- By default, the fastq data alignement will be performed by BWA, if you wish this step to be performed by STAR please specify it:
+
+```$ python mitoseq.py --star```  or  ```$ python mitoseq.py -a```
+
+- You can decide to use the consensus sequence after the mapping:
+
+```$ python mitoseq.py --consensus```  or  ```$ python mitoseq.py -s```
+
+This should run faster, but will lose variation data, as the most common base would be chosen and not all of them.
+
+- If your machine is limited in hardware you can specify hardware options:
+
+```$ python mitoseq.py --core 2 --thread 2```  or  ```$ python mitoseq.py -c 2 -t 2```
+
+which will run the pipeline on 2 cores using 2 threads.
+
+- You can choose to keep all transitional files by using the following command:
+
+```$ python mitoseq.py --keep```  or  ```$ python mitoseq.py -k```
+
+(Not recomended as far as every run generates ~50Gb of data for the whole genome)
+
+## Results
+- By the end you will obtain data/output/haplogroups.txt in which all samples' haplogroups are found along with the Haplogrep's quality score for each sample.
