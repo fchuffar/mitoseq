@@ -1,4 +1,4 @@
-[![forthebadge](https://forthebadge.com/images/badges/powered-by-black-magic.svg)](https://forthebadge.com)
+
 
 # MITOSEQ
 A pipeline dedicated to mitochondrial genome analysis from RNA sequencing data.
