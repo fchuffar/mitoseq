@@ -130,7 +130,6 @@ files = prepareSamples(PathToSamples, PathToTemp, PathToOutput)
 # Pipeline execution
 prompt = f"""cd src ; \
     snakemake --rerun-incomplete \
-    -n \
     -c {args.core} \
     {' '.join(files)} \
     --config mitoName={mitochondriaName} \

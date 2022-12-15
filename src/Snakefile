@@ -76,6 +76,8 @@ if StarMode:
             --genomeFastaFiles {input.reference} \
             --sjdbGTFfile {input.gtf} \
             --sjdbOverhang 99 \
+            
+            mv Log.out {input.genomeDir}
             """
     
 
@@ -100,9 +102,9 @@ if StarMode:
             --outSAMmapqUnique 255 \
             --outFileNamePrefix {params.resultprefix} \
             --twopassMode Basic \
-            --outSAMtype BAM Unsorted
+            --outSAMtype BAM SortedByCoordinate
 
-            mv {params.resultprefix}Aligned.out.bam {output}
+            mv {params.resultprefix}Aligned.sortedByCoord.out.bam {output}
             """
 
 
@@ -128,9 +130,9 @@ if StarMode:
             --outSAMmapqUnique 255 \
             --readFilesCommand gunzip -c \
             --twopassMode Basic \
-            --outSAMtype BAM Unsorted
+            --outSAMtype BAM SortedByCoordinate
 
-            mv {params.resultprefix}Aligned.out.bam {output}
+            mv {params.resultprefix}Aligned.sortedByCoord.out.bam {output}
             """
 else:
     rule mapping_bwa_fastq:
@@ -237,7 +239,7 @@ if ConsensusMode:
 
     rule find_haplogroup_consensus:
         input:
-            result = ancient(PathToTemp + "{sample}/{sample}.fasta"),
+            consensus = ancient(PathToTemp + "{sample}/{sample}.fasta"),
             the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
@@ -247,7 +249,7 @@ if ConsensusMode:
             PathToEnv
         shell:
             """
-            haplogrep classify --in {input.result} --out {output} --format fasta
+            haplogrep classify --in {input.consensus} --out {output} --format fasta
 
             if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """
@@ -271,7 +273,7 @@ else:
             --native-pair-hmm-threads {params.thread} \
             -R {input.reference} \
             -I {input.bam} \
-            -O {output}"
+            -O {output}
             """
 
 
@@ -289,13 +291,13 @@ else:
             --min-allele-fraction 0.2 \
             -R {input.reference} \
             -V {input.vcf} \
-            -O {output}"
+            -O {output}
             """
 
 
     rule find_haplogroup_vcf:
         input:
-            ancient(PathToTemp + "{sample}/{sample}.filtered.vcf"),
+            vcf = ancient(PathToTemp + "{sample}/{sample}.filtered.vcf"),
             the_dir = ancient(PathToTemp + "{sample}")
         output:
             PathToOutput + "{sample}.txt"
@@ -305,7 +307,7 @@ else:
             PathToEnv
         shell:
             """
-            haplogrep classify --in {input} --out {output} --format vcf
+            haplogrep classify --in {input.vcf} --out {output} --format vcf
 
             if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """
