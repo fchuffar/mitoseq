@@ -81,5 +81,7 @@ which will run the pipeline on 2 cores using 2 threads.
 
 (Not recomended as far as every run generates ~50Gb of data for the whole genome)
 
+Be sure to specify the parameter ```-n CHRMNAME``` with the reference genome mitochondrial contig name in case it's different from the mitochondrial reference contig name in order to keep compatibility.
+
 ## Results
 - By the end you will obtain data/output/haplogroups.txt in which all sample's haplogroups are merged along with the Haplogrep's quality score for each sample.
