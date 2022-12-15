@@ -6,14 +6,13 @@ from os import system
 from argparse import ArgumentParser
 
 
-
 from src.utils import (
     prepareRef,
     prepareMito,
     prepareGtf,
     prepareSamples,
     fuse_haplogroups,
-)  # These are all the functions coming from utils.py
+)  # These are all the functions used from utils.py
 
 PathToRef = "data/input/reference/"
 PathToMito = "data/input/mitochondria/"
@@ -23,9 +22,11 @@ PathToTemp = "data/temp/"
 PathToOutput = "../data/output/"
 
 # Create a class object that will be used to group every arguments and options
-parser = ArgumentParser(description="Every argument is optional but, in recommendation, you should at least precise the keep, core, thread, chrM arguments")
+parser = ArgumentParser(
+    description="Every argument is optional but, in recommendation, you should at least precise the keep, core, thread, chrM arguments"
+)
 
-
+# Here are all the possibles arguments
 parser.add_argument(
     "-k",
     "--keep",
@@ -93,7 +94,7 @@ parser.add_argument(
 # Parse the arguments and put them into a dictionary for fast and easy access
 args = parser.parse_args()
 
-
+# Launch the src/setup.sh with the needed arguments, please read the documentation inside of it
 system(
     f"""src/setup.sh {args.genref} \
           {args.genref[args.genref.rfind('/') + 1:]} \
@@ -103,12 +104,16 @@ system(
           {args.star}"""
 )
 
+# Prepare the renference file for the pipeline
 referenceName = prepareRef(PathToRef, PathToTemp)
 
+# Prepare the mitochondria reference file for the pipeline
 mitochondriaName = prepareMito(PathToMito, PathToTemp, args.chrMName)
 
+# Prepare the Gene Transfert Format file for the pipeline
 gtfName = prepareGtf(PathToGtf, PathToRef, PathToTemp, args.star)
 
+# Will get all the samples names to pass it into the pipeline
 files = prepareSamples(PathToSamples, PathToTemp, PathToOutput)
 
 
@@ -126,13 +131,15 @@ prompt = f"""cd src ; \
     referenceName={referenceName} \
     gtfName={gtfName}"""
 
+# Execute the program
 system(prompt)
 
 # At the end of the pipeline, delete temp file if you don't want to keep it
 if not args.keep:
     system("rm -rf data/temp/ 2> /dev/null")
 
-
+# Will merge the differents haplogrep results, found in the output folder, into haplogroups.txt
 fuse_haplogroups()
 
+# Give the resulting haplogroups as a formated output in the standard output
 system("column -t data/output/haplogroups.txt")
