@@ -309,7 +309,7 @@ else:
             PathToEnv
         shell:
             """
-            haplogrep classify --in {input.vcf} --out {output} --format vcf
+            haplogrep classify --in {input.vcf} --out {output} --format vcf --hetLevel=0.5
 
             if [ "{params.keep}" = "False" ] ; then rm -rf {input.the_dir} ; fi
             """
