@@ -53,7 +53,6 @@ Consensus-->Haplogrep;
 ### For complete information you can get the arguments manual by:
 ```$ python mythoseq.py -h```
 
-Or feel free to check the documentation file in the root folder of the project.
 
 ### Here are the main arguments :
 
